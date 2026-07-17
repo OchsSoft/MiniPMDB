@@ -1,0 +1,25 @@
+name: MiniPMDB Audit
+description: Fail CI when governed project memory has unresolved quality violations.
+author: OchsSoft
+branding:
+  icon: shield
+  color: purple
+inputs:
+  store:
+    description: Path to the MiniPMDB JSON store in the checked-out repository.
+    required: true
+  strict:
+    description: Fail on warnings in addition to errors.
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Audit governed memory
+      shell: bash
+      run: |
+        args=(audit --store "${{ inputs.store }}")
+        if [ "${{ inputs.strict }}" = "true" ]; then
+          args+=(--strict)
+        fi
+        node "$GITHUB_ACTION_PATH/src/cli.js" "${args[@]}"

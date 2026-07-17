@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="MiniPMDB governed agent-memory audit dashboard">
+    <title>MiniPMDB · Memory Quality Gate</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">LOCAL MEMORY QUALITY GATE</p>
+        <h1>MiniPMDB</h1>
+      </div>
+      <div class="audit-state" aria-live="polite">
+        <span id="audit-dot" class="audit-dot neutral" aria-hidden="true"></span>
+        <span id="audit-label">Checking…</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="project-title">
+        <div>
+          <p class="section-label">SYNTHETIC PROJECT</p>
+          <h2 id="project-title">Loading project…</h2>
+          <p id="project-key" class="muted"></p>
+        </div>
+        <div class="hero-actions" aria-label="Demo controls">
+          <button id="reset-demo" class="secondary" type="button">Reset failing state</button>
+          <button id="fix-demo" class="primary" type="button">Apply governed fix</button>
+          <button id="refresh" class="quiet" type="button">Refresh</button>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="Memory audit metrics">
+        <div><span id="memory-count">–</span><small>memories</small></div>
+        <div><span id="source-count">–</span><small>sources</small></div>
+        <div><span id="link-count">–</span><small>links</small></div>
+        <div><span id="error-count">–</span><small>errors</small></div>
+      </section>
+
+      <div class="workspace">
+        <section class="audit-pane" aria-labelledby="audit-heading">
+          <div class="pane-heading">
+            <div>
+              <p class="section-label">STRICT AUDIT</p>
+              <h2 id="audit-heading">Governance findings</h2>
+            </div>
+            <code>minipmdb audit --strict</code>
+          </div>
+          <div id="issues" class="issues" aria-live="polite"></div>
+        </section>
+
+        <section class="context-pane" aria-labelledby="context-heading">
+          <div class="pane-heading">
+            <div>
+              <p class="section-label">AGENT OUTPUT</p>
+              <h2 id="context-heading">Context pack</h2>
+            </div>
+          </div>
+          <form id="context-form" class="context-controls">
+            <label>
+              Profile
+              <select id="profile" name="profile">
+                <option value="compact">Compact</option>
+                <option value="balanced">Balanced</option>
+                <option value="drift_guard">Drift guard</option>
+              </select>
+            </label>
+            <label class="task-field">
+              Task
+              <input id="task" name="task" value="prepare the release" maxlength="240">
+            </label>
+            <button class="secondary" type="submit">Build pack</button>
+          </form>
+          <div class="context-meta">
+            <span id="context-size">–</span>
+            <span id="context-warning-count">–</span>
+          </div>
+          <pre id="context-output" tabindex="0">Loading context…</pre>
+        </section>
+      </div>
+
+      <section class="memory-pane" aria-labelledby="memory-heading">
+        <div class="pane-heading">
+          <div>
+            <p class="section-label">LOCAL STORE</p>
+            <h2 id="memory-heading">Memory lifecycle</h2>
+          </div>
+          <p class="muted">Reviewed truth stays separate from warnings and history.</p>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <caption class="sr-only">MiniPMDB memory records and governance state</caption>
+            <thead>
+              <tr><th scope="col">Status</th><th scope="col">Memory</th><th scope="col">Confidence</th><th scope="col">Evidence</th></tr>
+            </thead>
+            <tbody id="memory-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Runs on 127.0.0.1</span>
+      <span>No cloud account · No telemetry · No runtime dependencies</span>
+    </footer>
+  </body>
+</html>

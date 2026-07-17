@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "project": {
+    "key": "paper-crane",
+    "name": "Paper Crane CLI",
+    "created_at": "2026-07-17T12:00:00.000Z",
+    "updated_at": "2026-07-17T12:10:00.000Z"
+  },
+  "memories": [
+    {
+      "id": "mem-registry-token",
+      "kind": "decision",
+      "status": "current",
+      "confidence": "high",
+      "title": "Release requires a registry token",
+      "body": "Add a long-lived package registry token to repository secrets before the release job can publish.",
+      "tags": ["release", "security"],
+      "source_ids": [],
+      "critical": true,
+      "created_at": "2026-07-17T12:00:00.000Z",
+      "updated_at": "2026-07-17T12:00:00.000Z",
+      "metadata": {
+        "review_state": "unreviewed",
+        "recorded_by": "coding-agent"
+      }
+    },
+    {
+      "id": "mem-oidc-release",
+      "kind": "decision",
+      "status": "reviewed",
+      "confidence": "high",
+      "title": "Release uses trusted publishing with OIDC",
+      "body": "The reviewed release workflow uses short-lived OIDC credentials and does not require a long-lived registry token.",
+      "tags": ["release", "security", "oidc"],
+      "source_ids": ["src-release-workflow"],
+      "critical": true,
+      "created_at": "2026-07-17T12:05:00.000Z",
+      "updated_at": "2026-07-17T12:05:00.000Z",
+      "metadata": {
+        "review_state": "reviewed",
+        "reviewed_by": "maintainer",
+        "reviewed_at": "2026-07-17T12:05:00.000Z"
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "src-release-workflow",
+      "type": "file",
+      "label": "Synthetic release workflow",
+      "ref": ".github/workflows/release.yml#trusted-publishing",
+      "created_at": "2026-07-17T12:04:00.000Z"
+    }
+  ],
+  "links": [
+    {
+      "id": "link-release-auth-conflict",
+      "relationship": "conflicts_with",
+      "from": "mem-registry-token",
+      "to": "mem-oidc-release",
+      "reason": "The two release authentication claims cannot both be active truth.",
+      "status": "open",
+      "resolution_memory_id": "",
+      "created_at": "2026-07-17T12:10:00.000Z",
+      "updated_at": "2026-07-17T12:10:00.000Z"
+    }
+  ]
+}
