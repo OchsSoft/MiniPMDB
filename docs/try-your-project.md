@@ -28,7 +28,7 @@ env = { MINIPMDB_STORE = ".minipmdb/store.json", MINIPMDB_MCP_MODE = "draft-writ
 
 On Windows, forward-slash paths such as `C:/tools/MiniPMDB/src/mcp.js` work well inside TOML. Save the configuration, restart the Codex client or extension, and open a new task in the target repository. Use `/mcp` where available to confirm that `minipmdb` is connected.
 
-The server advertises its review-first constraints during MCP initialization. New memories default to `draft`. In `draft-write` mode, the only write tool is `memory_remember`, and it forcibly keeps agent-created records in that state even if a caller asks for an active status.
+The server advertises its review-first constraints during MCP initialization. `draft-write` is the MCP permission mode: it means the connected LLM may propose memories. It is not the stored lifecycle state. New records default to `unreviewed`, and the only write tool, `memory_remember`, cannot promote them to active truth.
 
 Official Codex configuration details are in the [OpenAI MCP documentation](https://learn.chatgpt.com/docs/extend/mcp).
 
@@ -45,7 +45,7 @@ Run every command below from the target project, replacing the MiniPMDB path and
 List the pending queue:
 
 ```console
-node /absolute/path/to/MiniPMDB/src/cli.js list --status draft --store .minipmdb/store.json
+node /absolute/path/to/MiniPMDB/src/cli.js list --status unreviewed --store .minipmdb/store.json
 ```
 
 For a candidate you accept, first attach evidence when appropriate:

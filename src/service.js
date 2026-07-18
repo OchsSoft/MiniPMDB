@@ -28,9 +28,9 @@ export class MiniPMDBService {
   async remember(input, { reviewFirst = true } = {}) {
     return this.store.update((data) => {
       const now = new Date().toISOString();
-      const requestedStatus = input.status || "draft";
-      const status = reviewFirst
-        ? "draft"
+      const requestedStatus = input.status || "unreviewed";
+      const status = reviewFirst && !["draft", "unreviewed"].includes(requestedStatus)
+        ? "unreviewed"
         : assertEnum(requestedStatus, MEMORY_STATUSES, "status");
       const memory = {
         id: input.id || `mem-${randomUUID()}`,

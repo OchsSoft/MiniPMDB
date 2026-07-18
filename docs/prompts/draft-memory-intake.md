@@ -23,10 +23,10 @@ For each candidate:
 - Add useful tags.
 - Do not invent source IDs. Leave source_ids empty and propose a real repository-relative file, heading, URL, issue, or commit for the human to attach during review.
 - Do not store secrets, credentials, personal data, raw conversation text, chain-of-thought, temporary progress, speculative guesses, or generic summaries.
-- Do not request current, reviewed, or resolved status. MiniPMDB must keep every agent-created item in draft state.
+- Do not request current, reviewed, or resolved status. MiniPMDB must keep every agent-created item unreviewed.
 
 After creating the candidates:
-1. Call memory_list with status "draft".
+1. Call memory_list with status "unreviewed".
 2. Call memory_context again for "understand this project safely" and verify the candidates appear only in warnings/history, never active truth.
 3. Call memory_audit with strict set to true.
 4. Return a compact review table with: memory ID, kind, confidence, title, proposed evidence reference, why it is durable, and your recommendation of approve, reject, or needs clarification.

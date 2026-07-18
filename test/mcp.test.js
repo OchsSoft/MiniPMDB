@@ -35,7 +35,7 @@ test("draft-write MCP advertises constrained memory creation", async () => {
     ],
     { MINIPMDB_MCP_MODE: "draft-write" }
   );
-  assert.match(responses.find((response) => response.id === 1).result.instructions, /draft records only/i);
+  assert.match(responses.find((response) => response.id === 1).result.instructions, /permission mode.*unreviewed candidates/i);
   const remembered = responses.find((response) => response.id === 2).result.tools
     .find((tool) => tool.name === "memory_remember");
   assert(remembered);

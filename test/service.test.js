@@ -16,7 +16,7 @@ test("demo fix produces a strict-clean store through an atomic update", async (t
   assert.equal((await service.audit({ strict: true })).passed, true);
 });
 
-test("agent-style writes remain draft even when current is requested", async (t) => {
+test("agent-style writes remain unreviewed even when current is requested", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "minipmdb-test-"));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const service = new MiniPMDBService({ storePath: path.join(directory, "store.json") });
@@ -28,6 +28,6 @@ test("agent-style writes remain draft even when current is requested", async (t)
     title: "Proposed decision",
     body: "This agent-created claim still needs a human review."
   });
-  assert.equal(store.memories[0].status, "draft");
+  assert.equal(store.memories[0].status, "unreviewed");
   assert.equal(store.memories[0].metadata.review_state, "unreviewed");
 });

@@ -77,6 +77,6 @@ The same governance audit is available through the CLI, local dashboard, MCP ser
 
 ## Use a project of your own
 
-The prepared Paper Crane fixture is not the only evaluation path. Follow [Try MiniPMDB on your own project](try-your-project.md) to initialize a disposable store in another local repository, let Codex create a small queue of draft candidates with the [copy-ready prompt](prompts/draft-memory-intake.md), and then attach evidence and approve or reject each candidate yourself.
+The prepared Paper Crane fixture is not the only evaluation path. Follow [Try MiniPMDB on your own project](try-your-project.md) to initialize a disposable store in another local repository, let Codex create a small queue of unreviewed candidates with the [copy-ready prompt](prompts/draft-memory-intake.md), and then attach evidence and approve or reject each candidate yourself.
 
 That path exercises the actual trust boundary: agent writes remain quarantined, human decisions control lifecycle state, rejected candidates stay out of context, and the strict audit still checks approved high-confidence claims for sources.

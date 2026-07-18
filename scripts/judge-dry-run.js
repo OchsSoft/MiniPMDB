@@ -95,14 +95,17 @@ try {
       }
     ]
   });
-  assert.match(draftResponses.find((message) => message.id === 10).result.instructions, /draft records only/i);
+  assert.match(
+    draftResponses.find((message) => message.id === 10).result.instructions,
+    /permission mode.*unreviewed candidates/i
+  );
   const approvedMemory = draftResponses.find((message) => message.id === 11).result.structuredContent.memory;
   const rejectedMemory = draftResponses.find((message) => message.id === 12).result.structuredContent.memory;
-  assert.equal(approvedMemory.status, "draft");
-  assert.equal(rejectedMemory.status, "draft");
+  assert.equal(approvedMemory.status, "unreviewed");
+  assert.equal(rejectedMemory.status, "unreviewed");
   const approvedId = approvedMemory.id;
   const rejectedId = rejectedMemory.id;
-  const pending = expectCliJson(["list", "--status", "draft", "--json", "--store", storePath]);
+  const pending = expectCliJson(["list", "--status", "unreviewed", "--json", "--store", storePath]);
   assert(pending.memories.some((memory) => memory.id === approvedId));
   assert(pending.memories.some((memory) => memory.id === rejectedId));
   expectCliSuccess([
@@ -136,7 +139,7 @@ try {
   ]);
   assert.match(reviewedContext.context_pack, /Use the supported Node\.js runtime/);
   assert.doesNotMatch(reviewedContext.context_pack, /Candidate that should not persist/);
-  pass("draft-write MCP creates only queued drafts; a human can source, approve, or reject them");
+  pass("draft-write MCP creates only unreviewed candidates; a human can source, approve, or reject them");
 
   const mcpResponses = await runMcp(storePath);
   const tools = mcpResponses.find((message) => message.id === 2).result.tools;
