@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const excluded = new Set([".git", ".minipmdb", "node_modules", "coverage", "dist"]);
+const excludedPaths = new Set([".video-tools", "video/.work", "video/output"]);
 const privateTerms = [
   ["Over", "lair"].join(""),
   ["Hearth", "Loop"].join(""),
@@ -48,6 +49,8 @@ async function listFiles(directory) {
   for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
     if (excluded.has(entry.name)) continue;
     const target = path.join(directory, entry.name);
+    const relative = path.relative(root, target).replaceAll("\\", "/");
+    if (entry.isDirectory() && excludedPaths.has(relative)) continue;
     if (entry.isDirectory()) output.push(...await listFiles(target));
     else if (entry.isFile()) output.push(target);
   }

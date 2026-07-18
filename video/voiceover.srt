@@ -1,0 +1,43 @@
+1
+00:00:00,000 --> 00:00:08,000
+Coding agents can remember more than ever. MiniPMDB makes sure remembered information is actually safe to trust.
+
+2
+00:00:08,000 --> 00:00:20,000
+Here, an agent says our release needs a long-lived registry token. Reviewed evidence says the project uses OIDC. Both claims cannot be active truth.
+
+3
+00:00:20,000 --> 00:00:36,000
+I load the intentionally broken synthetic project and run the strict audit. MiniPMDB exits nonzero for three reasons: the claim is active but unreviewed, high-confidence but unsourced, and part of an unresolved conflict.
+
+4
+00:00:36,000 --> 00:00:54,000
+The local dashboard shows the same policy, not a separate interpretation. The audit is blocked, the two memories remain visible, and the unsafe claim cannot silently pass as reviewed project context.
+
+5
+00:00:54,000 --> 00:01:08,000
+Even before resolution, compact context keeps the reviewed OIDC decision as active truth and moves the agent note into warnings. Token saving is never allowed to erase a critical warning.
+
+6
+00:01:08,000 --> 00:01:22,000
+The fix does not delete history. It adds a reviewed resolution, marks the old token claim superseded, and links the source-backed OIDC decision as its replacement. The strict audit now passes.
+
+7
+00:01:22,000 --> 00:01:40,000
+The live dashboard turns green. The agent receives clean active truth, while the superseded claim stays visible as historical warning. That makes the result explainable instead of merely convenient.
+
+8
+00:01:40,000 --> 00:01:58,000
+Through MCP, Codex can request governed context, run the same audit, or inspect lifecycle state. The server is read-only by default, and draft-write mode still cannot let an agent approve its own memory.
+
+9
+00:01:58,000 --> 00:02:14,000
+The identical audit runs in the CLI, MCP, dashboard, and this GitHub Action. MiniPMDB has zero runtime dependencies, eleven passing tests, synthetic sample data, and an MPL two point zero license.
+
+10
+00:02:14,000 --> 00:02:32,000
+Codex with GPT-five-point-six was the primary environment for this Build Week extraction: from the audit-first product thesis through implementation, sanitization, tests, documentation, and demo design. The repository has new history and contains no private payloads or integrations.
+
+11
+00:02:32,000 --> 00:02:42,000
+Other tools help agents remember. MiniPMDB helps teams decide what agents are allowed to trust. The project is open source on GitHub.

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { runSanitizeCheck } from "./sanitize-check.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const sourceDirectories = ["src", "scripts", "test", "test-support", "public"];
+const sourceDirectories = ["src", "scripts", "test", "test-support", "public", "video"];
 const files = [];
 for (const directory of sourceDirectories) {
   files.push(...await javascriptFiles(path.join(root, directory)));
@@ -29,7 +29,7 @@ async function javascriptFiles(directory) {
     for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
       const target = path.join(directory, entry.name);
       if (entry.isDirectory()) output.push(...await javascriptFiles(target));
-      else if (entry.isFile() && entry.name.endsWith(".js")) output.push(target);
+      else if (entry.isFile() && /\.m?js$/.test(entry.name)) output.push(target);
     }
     return output;
   } catch (error) {
