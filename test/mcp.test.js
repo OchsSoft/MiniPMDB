@@ -19,6 +19,7 @@ test("read-only MCP lists only read tools and returns governed context", async (
     }
   ]);
   const listed = responses.find((response) => response.id === 2).result.tools;
+  assert.match(responses.find((response) => response.id === 1).result.instructions, /read-only/i);
   assert(!listed.some((tool) => tool.name === "memory_remember"));
   assert(listed.every((tool) => tool.annotations.readOnlyHint === true));
   const context = responses.find((response) => response.id === 3).result;
@@ -28,10 +29,15 @@ test("read-only MCP lists only read tools and returns governed context", async (
 
 test("draft-write MCP advertises constrained memory creation", async () => {
   const responses = await runMcp(
-    [{ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }],
+    [
+      { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
+      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }
+    ],
     { MINIPMDB_MCP_MODE: "draft-write" }
   );
-  const remembered = responses[0].result.tools.find((tool) => tool.name === "memory_remember");
+  assert.match(responses.find((response) => response.id === 1).result.instructions, /unreviewed drafts/i);
+  const remembered = responses.find((response) => response.id === 2).result.tools
+    .find((tool) => tool.name === "memory_remember");
   assert(remembered);
   assert.equal(remembered.annotations.readOnlyHint, false);
   assert.equal(remembered.annotations.destructiveHint, false);

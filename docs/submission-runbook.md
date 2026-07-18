@@ -7,6 +7,7 @@ This runbook keeps the final MiniPMDB Developer Tools submission reproducible. C
 - [ ] Clone or download the public repository into a new directory.
 - [ ] Confirm the README's first command works without an install step: `npm run judge:demo`.
 - [ ] Verify the dashboard starts blocked, **Apply governed fix** turns it green, and the warning remains visible.
+- [ ] Run the bring-your-own-project flow from [`docs/try-your-project.md`](try-your-project.md) against a disposable repository: create drafts through MCP, approve one with evidence, reject one, and inspect the resulting context.
 - [ ] Run `npm ci --ignore-scripts`, `npm run check`, `npm test`, `npm run smoke`, and `npm run judge:dry-run`.
 - [ ] Confirm the public GitHub Actions validation is green.
 - [ ] Inspect the repository and source archive for credentials, private data, local paths, build output, and unrelated project vocabulary.
