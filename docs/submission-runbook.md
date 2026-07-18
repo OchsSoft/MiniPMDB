@@ -5,7 +5,7 @@ This runbook keeps the final MiniPMDB Developer Tools submission reproducible. C
 ## Repository dry run
 
 - [ ] Clone or download the public repository into a new directory.
-- [ ] Confirm the README's first command works without an install step: `npm run judge:demo`.
+- [ ] From a fresh clone and empty runtime/cache directory, run `npm ci --ignore-scripts` and `npm run judge:demo` through the real first MongoDB download.
 - [ ] Verify the dashboard starts blocked, **Apply governed fix** turns it green, and the warning remains visible.
 - [ ] Run the bring-your-own-project flow from [`docs/try-your-project.md`](try-your-project.md) against a disposable repository: create drafts through MCP, approve one with evidence, reject one, and inspect the resulting context.
 - [ ] Run `npm ci --ignore-scripts`, `npm run check`, `npm test`, `npm run smoke`, and `npm run judge:dry-run`.
@@ -15,7 +15,7 @@ This runbook keeps the final MiniPMDB Developer Tools submission reproducible. C
 
 ## Video pass
 
-- [ ] Open the 2:42 silent 1080p master described in [`video/README.md`](../video/README.md).
+- [ ] Open the 2:50 silent 1080p master described in [`video/README.md`](../video/README.md).
 - [ ] Record one narration track from [`video/voiceover.md`](../video/voiceover.md), beginning at `00:00`.
 - [ ] Import [`video/voiceover.srt`](../video/voiceover.srt) as captions and retime only if the final narration needs it.
 - [ ] Confirm the export is under three minutes, 1080p, H.264/AAC, and has clearly audible narration.
@@ -30,7 +30,9 @@ This runbook keeps the final MiniPMDB Developer Tools submission reproducible. C
 - **One-sentence pitch:** MiniPMDB prevents unreviewed, unsourced, contradictory, or obsolete project memories from silently becoming coding-agent truth.
 - **Repository:** `https://github.com/OchsSoft/MiniPMDB`
 - **Primary proof:** the fail-fix-pass dashboard flow backed by the identical CLI, MCP, and GitHub Action audit.
-- **Built with:** Codex, GPT-5.6, Node.js, MCP, GitHub Actions, HTML, CSS, and JavaScript.
+- **Built with:** Codex, GPT-5.6, Node.js, MongoDB, MCP, GitHub Actions, HTML, CSS, and JavaScript.
+
+Copy the final public descriptions and testing steps from [`docs/submission-copy.md`](submission-copy.md).
 
 Use the README and [`HACKATHON.md`](../HACKATHON.md) as the source of truth for product boundaries and preexisting-work disclosure. Before submission, replace the pending `/feedback` Session ID in `HACKATHON.md`, add the public video URL, and record the final public commit or release tag.
 

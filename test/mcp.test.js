@@ -1,99 +1,52 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { startMiniPMDBServer } from "../src/api.js";
+import { fixture } from "../test-support/fixtures.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const storePath = path.join(root, "examples", "release-guard", "resolved.json");
 
-test("read-only MCP lists only read tools and returns governed context", async () => {
-  const responses = await runMcp(
-    [
-      { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
-      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
-      {
-        jsonrpc: "2.0",
-        id: 3,
-        method: "tools/call",
-        params: { name: "memory_context", arguments: { task: "release", profile: "compact" } }
-      }
-    ],
-    { MINIPMDB_MCP_MODE: "read-only" }
-  );
-  const listed = responses.find((response) => response.id === 2).result.tools;
-  assert.match(responses.find((response) => response.id === 1).result.instructions, /read-only/i);
-  assert(!listed.some((tool) => tool.name === "memory_remember"));
-  assert(listed.every((tool) => tool.annotations.readOnlyHint === true));
-  const context = responses.find((response) => response.id === 3).result;
-  assert.match(context.content[0].text, /Active project truth/);
-  assert.match(context.content[0].text, /Warnings and history/);
+test("MCP defaults to project-draft and strict read-only removes writes", async (t) => {
+  const home = await fs.mkdtemp(path.join(os.tmpdir(), "minipmdb-mcp-test-"));
+  const repo = path.join(home, "repo");
+  await fs.mkdir(repo);
+  const seed = await fixture("resolved.json");
+  const project = seed.projects.find((item) => item.key === "paper-crane-cli");
+  project.repo_path = repo;
+  project.repo_root = process.platform === "win32" ? repo.toLowerCase() : repo;
+  const running = await startMiniPMDBServer({ home: path.join(home, "runtime"), port: 0, seed });
+  t.after(async () => { await running.close(); await fs.rm(home, { recursive: true, force: true }); });
+
+  const drafted = await runMcp(running.url, repo, "project-draft", [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
+    { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "memory_remember", arguments: { title: "Candidate", body: "Needs review." } } }
+  ]);
+  assert.match(drafted[0].result.instructions, /Project-draft/);
+  assert(drafted[1].result.tools.some((item) => item.name === "memory_remember"));
+  assert.equal(drafted[2].result.structuredContent.memory.status, "unreviewed");
+  const readOnly = await runMcp(running.url, repo, "read-only", [{ jsonrpc: "2.0", id: 4, method: "tools/list", params: {} }]);
+  assert.deepEqual(readOnly[0].result.tools.map((item) => item.name), ["memory_context", "memory_audit", "memory_list"]);
 });
 
-test("project-draft MCP advertises constrained candidate and evidence writes", async () => {
-  const responses = await runMcp(
-    [
-      { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
-      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
-      {
-        jsonrpc: "2.0",
-        id: 4,
-        method: "tools/call",
-        params: {
-          name: "source_attach",
-          arguments: {
-            memory_id: "mem-oidc-release",
-            type: "file",
-            label: "Untrusted new evidence",
-            ref: "README.md"
-          }
-        }
-      }
-    ]
-  );
-  assert.match(responses.find((response) => response.id === 1).result.instructions, /project-draft.*configured project store/i);
-  const tools = responses.find((response) => response.id === 2).result.tools;
-  const remembered = tools.find((tool) => tool.name === "memory_remember");
-  assert(remembered);
-  assert(tools.some((tool) => tool.name === "source_attach"));
-  assert.equal(remembered.annotations.readOnlyHint, false);
-  assert.equal(remembered.annotations.destructiveHint, false);
-  assert.match(
-    responses.find((response) => response.id === 4).error.message,
-    /only be attached to a draft or unreviewed candidate/i
-  );
-
-  const aliasResponses = await runMcp(
-    [{ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }],
-    { MINIPMDB_MCP_MODE: "draft-write" }
-  );
-  assert.deepEqual(
-    aliasResponses[0].result.tools.map((tool) => tool.name),
-    tools.map((tool) => tool.name)
-  );
-});
-
-function runMcp(messages, extraEnv = {}) {
+function runMcp(apiUrl, cwd, mode, messages) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [path.join(root, "src", "mcp.js")], {
-      cwd: root,
-      env: { ...process.env, MINIPMDB_STORE: storePath, ...extraEnv },
-      stdio: ["pipe", "pipe", "pipe"]
-    });
+    const child = spawn(process.execPath, [path.join(root, "src", "mcp.js")], { cwd, env: { ...process.env, MINIPMDB_API_URL: apiUrl, MINIPMDB_MCP_MODE: mode }, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let stdout = "";
     let stderr = "";
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error(`MCP test timed out. ${stderr}`));
-    }, 5_000);
+    const timer = setTimeout(() => { child.kill(); reject(new Error(stderr || "MCP timeout")); }, 10_000);
     child.stdout.on("data", (chunk) => { stdout += chunk; });
     child.stderr.on("data", (chunk) => { stderr += chunk; });
     child.once("error", reject);
     child.once("close", (code) => {
       clearTimeout(timer);
-      if (code !== 0) return reject(new Error(`MCP exited ${code}: ${stderr}`));
-      resolve(stdout.trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)));
+      if (code !== 0) return reject(new Error(stderr));
+      resolve(stdout.trim().split(/\r?\n/).filter(Boolean).map(JSON.parse));
     });
-    child.stdin.end(`${messages.map((message) => JSON.stringify(message)).join("\n")}\n`);
+    child.stdin.end(`${messages.map(JSON.stringify).join("\n")}\n`);
   });
 }

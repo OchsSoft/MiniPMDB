@@ -1,176 +1,127 @@
-import { ACTIVE_STATUSES, EXCLUDED_STATUSES, WARNING_STATUSES } from "./constants.js";
-import { buildContextPack, isGovernedActive, isReviewMismatch } from "./context.js";
-import { normalizeStore } from "./schema.js";
+import { ACTIVE_STATUSES, CANDIDATE_STATUSES, EXCLUDED_STATUSES } from "./constants.js";
+import { buildContextPack } from "./context.js";
+import { normalizeSnapshot } from "./schema.js";
 
-const AUDIT_PROFILES = ["drift_guard", "balanced", "compact"];
-
-export function auditStore(storeValue, { strict = false } = {}) {
-  const store = normalizeStore(storeValue);
+export function auditSnapshot(snapshotValue, { strict = false, projectKey = "" } = {}) {
+  const snapshot = normalizeSnapshot(snapshotValue);
   const issues = [];
-  const memoryById = new Map(store.memories.map((memory) => [memory.id, memory]));
-  const sourceIds = new Set(store.sources.map((source) => source.id));
+  const projects = new Map(snapshot.projects.map((item) => [item.key, item]));
+  const memories = new Map(snapshot.memories.map((item) => [item.id, item]));
+  const sources = new Map(snapshot.sources.map((item) => [item.id, item]));
 
-  for (const memory of store.memories) {
-    if (ACTIVE_STATUSES.has(memory.status) && isReviewMismatch(memory)) {
-      issues.push(issue(
-        "active_unreviewed",
-        "error",
-        `Active memory ${memory.id} is still marked unreviewed.`,
-        { memory_ids: [memory.id] }
-      ));
-    }
-    if (ACTIVE_STATUSES.has(memory.status) && memory.confidence === "high" && memory.source_ids.length === 0) {
-      issues.push(issue(
-        "high_confidence_without_source",
-        "error",
-        `High-confidence active memory ${memory.id} has no source.`,
-        { memory_ids: [memory.id] }
-      ));
-    }
-    const missingSources = memory.source_ids.filter((id) => !sourceIds.has(id));
-    if (missingSources.length) {
-      issues.push(issue(
-        "broken_source_reference",
-        "error",
-        `Memory ${memory.id} references missing sources: ${missingSources.join(", ")}.`,
-        { memory_ids: [memory.id] }
-      ));
-    }
+  for (const memory of snapshot.memories) auditMemory(memory, { projects, sources, issues });
+  for (const source of snapshot.sources) {
+    if (!projects.has(source.project_key)) add(issues, "unknown_source_project", "error", `Source ${source.id} references unknown project ${source.project_key}.`, { source_ids: [source.id] });
   }
+  for (const link of snapshot.links) auditLink(link, { memories, issues });
+  for (const touchpoint of snapshot.touchpoints) auditTouchpoint(touchpoint, { projects, memories, issues });
 
-  for (const link of store.links) {
-    const from = memoryById.get(link.from);
-    const to = memoryById.get(link.to);
-    if (!from || !to) {
-      issues.push(issue(
-        link.relationship === "supersedes" ? "broken_supersession_reference" : "broken_link_reference",
-        "error",
-        `Link ${link.id} points to a missing memory.`,
-        { link_ids: [link.id] }
-      ));
+  const contextProjects = projectKey ? [projectKey] : snapshot.projects.map((item) => item.key);
+  for (const key of contextProjects) {
+    if (!projects.has(key)) {
+      add(issues, "unknown_context_project", "error", `Context project does not exist: ${key}.`, { project_keys: [key] });
       continue;
     }
-    if (link.relationship === "supersedes" && to.status !== "superseded") {
-      issues.push(issue(
-        "superseded_memory_still_active",
-        "error",
-        `Memory ${to.id} is superseded by ${from.id} but has status ${to.status}.`,
-        { memory_ids: [to.id, from.id], link_ids: [link.id] }
-      ));
-    }
-    if (link.relationship === "conflicts_with") {
-      const resolution = memoryById.get(link.resolution_memory_id);
-      const validResolution =
-        link.status === "resolved" &&
-        resolution &&
-        ["reviewed", "current", "resolved"].includes(resolution.status) &&
-        !isReviewMismatch(resolution);
-      if (!validResolution) {
-        issues.push(issue(
-          "unresolved_conflict",
-          "error",
-          `Conflict ${link.id} lacks a reviewed resolution.`,
-          { memory_ids: [from.id, to.id], link_ids: [link.id] }
-        ));
+    for (const profile of ["drift_guard", "balanced", "compact"]) {
+      try {
+        auditContext(buildContextPack(snapshot, { projectKey: key, profile, task: "audit context safety" }), issues);
+      } catch (error) {
+        add(issues, "context_build_failed", "error", `${key}/${profile} context failed: ${error.message}`, { project_keys: [key], profile });
       }
     }
   }
 
-  const linkedSuperseded = new Set(
-    store.links.filter((link) => link.relationship === "supersedes").map((link) => link.to)
-  );
-  for (const memory of store.memories.filter((item) => item.status === "superseded")) {
-    if (!linkedSuperseded.has(memory.id)) {
-      issues.push(issue(
-        "unlinked_superseded_memory",
-        "warning",
-        `Superseded memory ${memory.id} has no supersession link.`,
-        { memory_ids: [memory.id] }
-      ));
-    }
-  }
-
-  const contexts = AUDIT_PROFILES.map((profile) => buildContextPack(store, { profile, task: "audit project truth" }));
-  for (const context of contexts) {
-    auditContext(context, issues);
-  }
-
-  const errorCount = issues.filter((item) => item.severity === "error").length;
-  const warningCount = issues.filter((item) => item.severity === "warning").length;
-  const passed = errorCount === 0 && (!strict || warningCount === 0);
+  const errors = issues.filter((item) => item.severity === "error").length;
+  const warnings = issues.filter((item) => item.severity === "warning").length;
   return {
-    passed,
-    strict: Boolean(strict),
-    generated_at: new Date().toISOString(),
-    project: store.project,
+    passed: errors === 0 && (!strict || warnings === 0),
+    strict,
     summary: {
-      memories: store.memories.length,
-      sources: store.sources.length,
-      links: store.links.length,
-      errors: errorCount,
-      warnings: warningCount
+      projects: snapshot.projects.length,
+      memories: snapshot.memories.length,
+      sources: snapshot.sources.length,
+      links: snapshot.links.length,
+      touchpoints: snapshot.touchpoints.length,
+      errors,
+      warnings
     },
-    issues,
-    profiles: contexts.map((context) => context.context_selection)
+    issues
   };
 }
 
 export function formatAuditReport(report) {
-  const lines = [
-    `MiniPMDB audit: ${report.passed ? "PASS" : "FAIL"}`,
-    `Project: ${report.project.name} (${report.project.key})`,
-    `Errors: ${report.summary.errors}; warnings: ${report.summary.warnings}; strict: ${report.strict ? "yes" : "no"}`
-  ];
-  for (const item of report.issues) {
-    lines.push(`${item.severity === "error" ? "ERROR" : "WARN "} ${item.code}: ${item.message}`);
-  }
-  if (!report.issues.length) {
-    lines.push("No governance violations found.");
-  }
+  const state = report.passed ? "PASS" : "FAIL";
+  const lines = [`MiniPMDB audit: ${state}`, `Projects ${report.summary.projects} | Memories ${report.summary.memories} | Touchpoints ${report.summary.touchpoints} | Errors ${report.summary.errors} | Warnings ${report.summary.warnings}`];
+  for (const item of report.issues) lines.push(`- ${item.severity.toUpperCase()} ${item.code}: ${item.message}`);
   return lines.join("\n");
 }
 
-function auditContext(context, issues) {
-  const profile = context.context_selection.profile;
-  const activeLeaks = context.active.filter(
-    (memory) => WARNING_STATUSES.has(memory.status) || EXCLUDED_STATUSES.has(memory.status) || isReviewMismatch(memory)
-  );
-  if (activeLeaks.length) {
-    issues.push(issue(
-      "warning_leaked_into_active_context",
-      "error",
-      `${profile} context treated warning records as active truth.`,
-      { memory_ids: activeLeaks.map((memory) => memory.id), profile }
-    ));
+function auditMemory(memory, { projects, sources, issues }) {
+  if (!projects.has(memory.project_key)) add(issues, "unknown_memory_project", "error", `Memory ${memory.id} references unknown project ${memory.project_key}.`, { memory_ids: [memory.id] });
+  if (CANDIDATE_STATUSES.has(memory.status)) {
+    add(issues, "unreviewed_candidate", "warning", `Memory ${memory.id} is awaiting human review.`, { memory_ids: [memory.id] });
+    if (memory.confidence === "high" && memory.source_ids.length === 0) add(issues, "candidate_without_source", "warning", `High-confidence candidate ${memory.id} has no source.`, { memory_ids: [memory.id] });
   }
-  const excludedLeaks = [...context.active, ...context.warnings].filter((memory) => EXCLUDED_STATUSES.has(memory.status));
-  if (excludedLeaks.length) {
-    issues.push(issue(
-      "excluded_memory_leaked_into_context",
-      "error",
-      `${profile} context included archived or rejected memories.`,
-      { memory_ids: excludedLeaks.map((memory) => memory.id), profile }
-    ));
+  if (ACTIVE_STATUSES.has(memory.status) && memory.metadata.review_state === "unreviewed") {
+    add(issues, "active_unreviewed", "error", `Memory ${memory.id} is active but still marked unreviewed.`, { memory_ids: [memory.id] });
   }
-  if (context.context_selection.actual_chars > context.context_selection.max_chars) {
-    issues.push(issue(
-      "context_budget_exceeded",
-      "error",
-      `${profile} context exceeded its character budget.`,
-      { profile }
-    ));
+  if (ACTIVE_STATUSES.has(memory.status) && memory.confidence === "high" && memory.source_ids.length === 0) {
+    add(issues, "high_confidence_without_source", "error", `High-confidence active memory ${memory.id} has no source.`, { memory_ids: [memory.id] });
   }
-  const omitted = context.context_selection.omitted_critical_warning_ids;
-  if (omitted.length) {
-    issues.push(issue(
-      "critical_warning_omitted",
-      "error",
-      `${profile} context omitted critical warnings: ${omitted.join(", ")}.`,
-      { memory_ids: omitted, profile }
-    ));
+  for (const sourceId of memory.source_ids) {
+    const source = sources.get(sourceId);
+    if (!source) add(issues, "broken_source_reference", "error", `Memory ${memory.id} references missing source ${sourceId}.`, { memory_ids: [memory.id], source_ids: [sourceId] });
+    else if (source.project_key !== memory.project_key) add(issues, "cross_project_source_reference", "error", `Memory ${memory.id} references source ${sourceId} owned by ${source.project_key}.`, { memory_ids: [memory.id], source_ids: [sourceId] });
   }
 }
 
-function issue(code, severity, message, details = {}) {
-  return { code, severity, message, ...details };
+function auditLink(link, { memories, issues }) {
+  const from = memories.get(link.from);
+  const to = memories.get(link.to);
+  if (!from || !to) add(issues, "broken_link_reference", "error", `Link ${link.id} references a missing memory.`, { link_ids: [link.id] });
+  if (link.relationship === "conflicts_with" && link.status === "open") {
+    add(issues, "unresolved_conflict", "error", `Conflict ${link.id} has no reviewed resolution.`, { link_ids: [link.id], memory_ids: [link.from, link.to] });
+  }
+  if (link.relationship === "conflicts_with" && link.status === "resolved") {
+    const resolution = memories.get(link.resolution_memory_id);
+    if (!resolution || !isGovernedActive(resolution)) add(issues, "invalid_conflict_resolution", "error", `Conflict ${link.id} does not reference an active reviewed resolution.`, { link_ids: [link.id] });
+  }
+}
+
+function isGovernedActive(memory) {
+  return ACTIVE_STATUSES.has(memory.status) && memory.metadata?.review_state !== "unreviewed" && memory.metadata?.review_state !== "rejected";
+}
+
+function auditTouchpoint(touchpoint, { projects, memories, issues }) {
+  if (touchpoint.projects.length < 2) add(issues, "touchpoint_needs_multiple_projects", "error", `Touchpoint ${touchpoint.id} must connect at least two projects.`, { touchpoint_ids: [touchpoint.id] });
+  for (const key of touchpoint.projects) {
+    if (!projects.has(key)) add(issues, "unknown_touchpoint_project", "error", `Touchpoint ${touchpoint.id} references unknown project ${key}.`, { touchpoint_ids: [touchpoint.id], project_keys: [key] });
+  }
+  const participating = new Set();
+  for (const memoryId of touchpoint.memory_ids) {
+    const memory = memories.get(memoryId);
+    if (!memory) {
+      add(issues, "broken_touchpoint_memory_reference", "error", `Touchpoint ${touchpoint.id} references missing memory ${memoryId}.`, { touchpoint_ids: [touchpoint.id], memory_ids: [memoryId] });
+      continue;
+    }
+    if (!touchpoint.projects.includes(memory.project_key)) add(issues, "touchpoint_memory_wrong_project", "error", `Touchpoint ${touchpoint.id} references ${memoryId} from non-participant ${memory.project_key}.`, { touchpoint_ids: [touchpoint.id], memory_ids: [memoryId] });
+    if (!EXCLUDED_STATUSES.has(memory.status)) participating.add(memory.project_key);
+  }
+  if (["active", "broken"].includes(touchpoint.status)) {
+    for (const key of touchpoint.projects) {
+      if (!participating.has(key)) add(issues, "touchpoint_missing_project_memory", "error", `Touchpoint ${touchpoint.id} has no governed memory from ${key}.`, { touchpoint_ids: [touchpoint.id], project_keys: [key] });
+    }
+  }
+  if (touchpoint.status === "broken") add(issues, "broken_touchpoint", "warning", `Touchpoint ${touchpoint.id} is marked broken.`, { touchpoint_ids: [touchpoint.id] });
+  if (touchpoint.status === "stale") add(issues, "stale_touchpoint", "warning", `Touchpoint ${touchpoint.id} needs verification.`, { touchpoint_ids: [touchpoint.id] });
+}
+
+function auditContext(context, issues) {
+  if (context.context_pack.length > context.context_selection.max_chars) add(issues, "context_budget_exceeded", "error", `${context.project.key}/${context.profile} context exceeds its character budget.`, { project_keys: [context.project.key], profile: context.profile });
+  if (context.context_selection.omitted_critical_warning_ids.length) add(issues, "critical_warning_omitted", "error", `${context.project.key}/${context.profile} omitted critical warnings.`, { memory_ids: context.context_selection.omitted_critical_warning_ids, profile: context.profile });
+  if (context.context_selection.omitted_broken_touchpoint_ids.length) add(issues, "broken_touchpoint_omitted", "error", `${context.project.key}/${context.profile} omitted broken touchpoints.`, { touchpoint_ids: context.context_selection.omitted_broken_touchpoint_ids, profile: context.profile });
+}
+
+function add(issues, code, severity, message, details = {}) {
+  issues.push({ code, severity, message, ...details });
 }

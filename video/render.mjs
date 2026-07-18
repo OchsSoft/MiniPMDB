@@ -17,6 +17,7 @@ await fs.mkdir(outputDirectory, { recursive: true });
 await assertCaptures(timeline, ffprobe);
 const concatPath = path.join(outputDirectory, "timeline.ffconcat");
 const outputPath = path.join(outputDirectory, "minipmdb-demo-silent.mp4");
+const contactSheetPath = path.join(outputDirectory, "contact-sheet.jpg");
 const totalSeconds = timeline.reduce((sum, scene) => sum + Number(scene.duration), 0);
 await fs.writeFile(concatPath, buildConcat(timeline), "utf8");
 
@@ -39,6 +40,7 @@ run(ffmpeg, [
   "-movflags", "+faststart",
   outputPath
 ]);
+renderContactSheet(ffmpeg, timeline, contactSheetPath);
 
 const probe = JSON.parse(run(ffprobe, ["-v", "error", "-show_streams", "-show_format", "-of", "json", outputPath], true));
 const video = probe.streams.find((stream) => stream.codec_type === "video");
@@ -48,6 +50,7 @@ if (!video || video.width !== 1920 || video.height !== 1080) throw new Error("Re
 if (!audio) throw new Error("Rendered video is missing its silent narration track.");
 if (Math.abs(duration - totalSeconds) > 0.25) throw new Error(`Rendered duration ${duration}s differs from ${totalSeconds}s.`);
 process.stdout.write(`Rendered ${outputPath}\nDuration: ${duration.toFixed(2)}s; video: ${video.codec_name}; audio: ${audio.codec_name}\n`);
+process.stdout.write(`Contact sheet: ${contactSheetPath}\n`);
 
 async function assertCaptures(scenes, probePath) {
   for (const scene of scenes) {
@@ -58,9 +61,19 @@ async function assertCaptures(scenes, probePath) {
     ], true));
     const stream = value.streams?.[0];
     if (stream?.width !== 1920 || stream?.height !== 1080) {
-      throw new Error(`${scene.id}.png must be 1920x1080; got ${stream?.width}x${stream?.height}.`);
+      throw new Error(`${scene.id}.jpg must be 1920x1080; got ${stream?.width}x${stream?.height}.`);
     }
   }
+}
+
+function renderContactSheet(command, scenes, target) {
+  const args = ["-y"];
+  for (const scene of scenes) args.push("-i", capturePath(scene.id));
+  const scaled = scenes.map((_, index) => `[${index}:v]scale=480:270[v${index}]`).join(";");
+  const layout = scenes.map((_, index) => `${(index % 4) * 480}_${Math.floor(index / 4) * 270}`).join("|");
+  const inputs = scenes.map((_, index) => `[v${index}]`).join("");
+  args.push("-filter_complex", `${scaled};${inputs}xstack=inputs=${scenes.length}:layout=${layout}:fill=0x090a0e[out]`, "-map", "[out]", "-frames:v", "1", "-q:v", "2", target);
+  run(command, args);
 }
 
 function buildConcat(scenes) {

@@ -1,35 +1,35 @@
-# Copy-ready draft-memory intake prompt
+# Copy-ready project-draft intake prompt
 
-Paste the prompt below into a new Codex task opened in the project you want to evaluate. MiniPMDB must already be configured in `project-draft` mode as described in the [bring-your-own-project guide](../try-your-project.md).
+Paste this into a new Codex task opened in the repository registered with MiniPMDB.
 
 ```text
 Use MiniPMDB as a review-first memory intake for this repository.
 
-Goal:
-Build a small human review queue of durable project memories grounded in this repository. Do not treat anything you create as approved truth.
+Goal: build a small human review queue of durable project memories grounded in repository evidence. Nothing you create is approved truth.
 
-Before creating drafts:
-1. Confirm that the MiniPMDB tools memory_list, memory_context, memory_audit, memory_remember, and source_attach are available. If either write tool is unavailable, explain that MiniPMDB is in strict read-only mode and stop without making changes.
-2. Call memory_list with no status filter, then memory_context for the task "understand this project safely", then memory_audit with strict set to true.
-3. Inspect the repository's highest-value evidence: its README, agent instructions, package or build manifest, primary configuration, architecture documentation, and CI workflow. Do not scan credentials, private key material, or unrelated user files.
-4. Avoid duplicates of existing memories.
+Before writing:
+1. Confirm memory_list, memory_context, memory_audit, memory_remember, and source_attach are available. If either write tool is missing, report strict read-only mode and stop without changes.
+2. Call memory_list, memory_context for “understand this project safely,” and memory_audit with strict=true.
+3. Inspect the repository README, agent instructions, build/package manifest, primary configuration, architecture docs, and CI. Do not inspect credentials, private keys, unrelated user files, or secret stores.
+4. Avoid duplicates.
 
-Create between three and seven candidates with memory_remember, one call per candidate. Good candidates are durable decisions, constraints, commands, environment requirements, integration boundaries, known risks, or recurring patterns that would materially help a future coding session.
+Create three to seven candidates with memory_remember, one per call. Good candidates are durable decisions, constraints, commands, environment requirements, integration boundaries, recurring patterns, and concrete risks that would materially help future work.
 
-For each candidate:
-- Choose the narrowest accurate kind.
-- Use high confidence only for an explicit repository fact; use medium or low for anything less direct.
-- Write a concise title and a self-contained body that says what future work must know and why it matters.
-- Add useful tags.
-- Do not invent source IDs. Leave source_ids empty when calling memory_remember, then call source_attach with the returned memory ID and a real repository-relative file, heading, URL, issue, or commit. Evidence attachment must not change the candidate's unreviewed status.
-- Do not store secrets, credentials, personal data, raw conversation text, chain-of-thought, temporary progress, speculative guesses, or generic summaries.
-- Do not request current, reviewed, or resolved status. MiniPMDB must keep every agent-created item unreviewed.
+For every candidate:
+- choose the narrowest accurate kind;
+- use high confidence only for an explicit repository fact;
+- write a concise title and self-contained body explaining what future work must know and why;
+- add useful tags;
+- attach a real repository-relative file, heading, URL, issue, or commit with source_attach after memory_remember returns the ID;
+- verify evidence attachment does not change status from unreviewed;
+- never store secrets, credentials, personal data, raw conversation, hidden reasoning, temporary progress, guesses, or generic summaries;
+- never request reviewed/current/resolved status.
 
-After creating the candidates:
-1. Call memory_list with status "unreviewed".
-2. Call memory_context again for "understand this project safely" and verify the candidates appear only in warnings/history, never active truth.
-3. Call memory_audit with strict set to true.
-4. Return a compact review table with: memory ID, kind, confidence, title, attached or proposed evidence reference, why it is durable, and your recommendation of approve, reject, or needs clarification.
+After writing:
+1. Call memory_list with status=unreviewed.
+2. Call memory_context again and verify candidates appear only in warnings/history, never active truth.
+3. Call memory_audit with strict=true.
+4. Return a compact review table: memory ID, kind, confidence, title, evidence reference, why durable, and recommendation (approve, reject, or clarify).
 
-Stop at the human gate. Do not approve, reject, supersede, edit project files, or claim the review is complete. The human will make every trust decision with the MiniPMDB CLI.
+Stop at the human gate. Do not approve, reject, supersede, register projects, edit touchpoints, or claim review is complete.
 ```

@@ -1,68 +1,121 @@
 {
-  "version": 1,
-  "project": {
-    "key": "paper-crane",
-    "name": "Paper Crane CLI",
-    "created_at": "2026-07-17T12:00:00.000Z",
-    "updated_at": "2026-07-17T12:10:00.000Z"
-  },
-  "memories": [
+  "version": 2,
+  "exported_at": "2026-07-18T16:00:00.000Z",
+  "projects": [
     {
-      "id": "mem-registry-token",
-      "kind": "decision",
-      "status": "current",
-      "confidence": "high",
-      "title": "Release requires a registry token",
-      "body": "Add a long-lived package registry token to repository secrets before the release job can publish.",
-      "tags": ["release", "security"],
-      "source_ids": [],
-      "critical": true,
-      "created_at": "2026-07-17T12:00:00.000Z",
-      "updated_at": "2026-07-17T12:00:00.000Z",
-      "metadata": {
-        "review_state": "unreviewed",
-        "recorded_by": "coding-agent"
-      }
+      "id": "project-paper-crane-cli",
+      "key": "paper-crane-cli",
+      "name": "Paper Crane CLI",
+      "repo_path": "",
+      "repo_root": "",
+      "status": "active",
+      "tags": ["synthetic", "cli"],
+      "created_at": "2026-07-18T16:00:00.000Z",
+      "updated_at": "2026-07-18T16:00:00.000Z"
     },
     {
+      "id": "project-release-relay",
+      "key": "release-relay",
+      "name": "Release Relay",
+      "repo_path": "",
+      "repo_root": "",
+      "status": "active",
+      "tags": ["synthetic", "release"],
+      "created_at": "2026-07-18T16:00:00.000Z",
+      "updated_at": "2026-07-18T16:00:00.000Z"
+    }
+  ],
+  "memories": [
+    {
       "id": "mem-oidc-release",
+      "project_key": "paper-crane-cli",
       "kind": "decision",
       "status": "reviewed",
       "confidence": "high",
-      "title": "Release uses trusted publishing with OIDC",
-      "body": "The reviewed release workflow uses short-lived OIDC credentials and does not require a long-lived registry token.",
-      "tags": ["release", "security", "oidc"],
-      "source_ids": ["src-release-workflow"],
+      "title": "Use OIDC for release publishing",
+      "body": "Paper Crane publishes releases with short-lived OIDC identity and does not keep a registry token.",
+      "tags": ["release", "oidc"],
+      "source_ids": ["src-workflow"],
       "critical": true,
-      "created_at": "2026-07-17T12:05:00.000Z",
-      "updated_at": "2026-07-17T12:05:00.000Z",
-      "metadata": {
-        "review_state": "reviewed",
-        "reviewed_by": "maintainer",
-        "reviewed_at": "2026-07-17T12:05:00.000Z"
-      }
+      "created_at": "2026-07-18T16:00:00.000Z",
+      "updated_at": "2026-07-18T16:00:00.000Z",
+      "metadata": { "review_state": "reviewed", "reviewed_by": "maintainer" }
+    },
+    {
+      "id": "mem-registry-token",
+      "project_key": "paper-crane-cli",
+      "kind": "constraint",
+      "status": "unreviewed",
+      "confidence": "high",
+      "title": "Release requires a long-lived registry token",
+      "body": "An agent proposed storing a registry token for every release.",
+      "tags": ["release", "credential"],
+      "source_ids": [],
+      "critical": true,
+      "created_at": "2026-07-18T16:01:00.000Z",
+      "updated_at": "2026-07-18T16:01:00.000Z",
+      "metadata": { "review_state": "unreviewed", "created_by": "agent" }
+    },
+    {
+      "id": "mem-relay-oidc",
+      "project_key": "release-relay",
+      "kind": "integration",
+      "status": "reviewed",
+      "confidence": "high",
+      "title": "Release Relay accepts OIDC identity",
+      "body": "Release Relay's publishing contract accepts only short-lived OIDC identity from trusted workflows.",
+      "tags": ["release", "oidc", "contract"],
+      "source_ids": ["src-release-contract"],
+      "critical": true,
+      "created_at": "2026-07-18T16:00:00.000Z",
+      "updated_at": "2026-07-18T16:00:00.000Z",
+      "metadata": { "review_state": "reviewed", "reviewed_by": "maintainer" }
     }
   ],
   "sources": [
     {
-      "id": "src-release-workflow",
+      "id": "src-workflow",
+      "project_key": "paper-crane-cli",
       "type": "file",
-      "label": "Synthetic release workflow",
-      "ref": ".github/workflows/release.yml#trusted-publishing",
-      "created_at": "2026-07-17T12:04:00.000Z"
+      "label": "Release workflow",
+      "ref": ".github/workflows/release.yml",
+      "created_at": "2026-07-18T16:00:00.000Z"
+    },
+    {
+      "id": "src-release-contract",
+      "project_key": "release-relay",
+      "type": "file",
+      "label": "Synthetic publishing contract",
+      "ref": "docs/publishing-contract.md",
+      "created_at": "2026-07-18T16:00:00.000Z"
     }
   ],
   "links": [
     {
-      "id": "link-release-auth-conflict",
+      "id": "link-auth-conflict",
       "relationship": "conflicts_with",
       "from": "mem-registry-token",
       "to": "mem-oidc-release",
-      "reason": "The two release authentication claims cannot both be active truth.",
+      "reason": "The two authentication requirements cannot both be active.",
       "status": "open",
       "resolution_memory_id": "",
-      "created_at": "2026-07-17T12:10:00.000Z",
-      "updated_at": "2026-07-17T12:10:00.000Z"
+      "created_at": "2026-07-18T16:01:00.000Z",
+      "updated_at": "2026-07-18T16:01:00.000Z"
+    }
+  ],
+  "touchpoints": [
+    {
+      "id": "touch-release-auth",
+      "name": "Release authentication contract",
+      "projects": ["paper-crane-cli", "release-relay"],
+      "kind": "api-contract",
+      "status": "broken",
+      "summary": "Paper Crane publishing must match Release Relay's accepted identity contract.",
+      "memory_ids": ["mem-registry-token", "mem-relay-oidc"],
+      "tags": ["release", "identity"],
+      "last_verified_at": "2026-07-18T16:00:00.000Z",
+      "created_at": "2026-07-18T16:00:00.000Z",
+      "updated_at": "2026-07-18T16:01:00.000Z"
     }
   ]
 }

@@ -1,44 +1,37 @@
 # Architecture
 
-MiniPMDB has one canonical artifact: a versioned JSON store. Every surface reads the same store and applies the same lifecycle and audit rules.
+MongoDB is MiniPMDB's only canonical store. The foreground server owns storage startup, the loopback API, and the dashboard. CLI and MCP are API clients, so no surface can create an isolated project-local truth silo.
 
 ```text
-                    ┌──────────────┐
-Codex / MCP ───────▶│              │
-CLI ───────────────▶│ JSON store   │◀──── atomic temp + rename
-Local dashboard ──▶│              │
-GitHub Action ─────▶│              │
-                    └──────┬───────┘
-                           │
-                 context + audit engines
+Codex / MCP ─┐
+CLI ─────────┼── HTTP on 127.0.0.1 ── service + policy ── MongoDB
+Dashboard ───┘                                      projects
+                                                    memories
+Snapshot export ── snapshot v2 ── GitHub Action     sources
+                                      (audit only)  links
+                                                    touchpoints
 ```
 
-## Modules
+## Storage modes
 
-- `schema.js` validates the complete store at every read and write boundary.
-- `store.js` serializes in-process mutations and writes through a same-directory temporary file.
-- `service.js` owns review-first mutations and the synthetic resolution operation.
-- `context.js` ranks reviewed truth and warnings deterministically, then enforces exact profile budgets.
-- `audit.js` evaluates raw lifecycle/provenance integrity and the output of every context profile.
-- `mcp.js` defaults to project-draft: read tools plus constrained unreviewed-candidate creation and candidate evidence attachment. Explicit read-only removes every write tool; neither mode exposes review decisions.
-- `api.js` serves read APIs, two synthetic demo operations, and the static local dashboard on loopback.
-- `cli.js` is the human and CI interface.
+Managed mode uses `mongodb-memory-server-core` as a lifecycle manager for an unmodified, pinned `mongod`. Despite the package name, MiniPMDB uses a persistent database path, the WiredTiger storage engine, and loopback binding. The binary cache and database live under `MINIPMDB_HOME` or the platform user-data directory.
 
-## Store shape
+External mode uses `MINIPMDB_MONGODB_URI` or a credential-free URI saved through the dashboard. The same official Node driver, schema validators, indexes, service, API, and policy run in both modes. `compose.yaml` supplies an optional external instance; it does not containerize the Node app.
 
-The store contains four top-level fields after `version`:
+## Collections
 
-- `project`: stable project identity and timestamps;
-- `memories`: claims with kind, status, confidence, sources, criticality, and review metadata;
-- `sources`: small provenance references, not copied source payloads;
-- `links`: explicit support, conflict, and supersession relationships.
+- `projects`: stable keys, display labels, and canonical repository roots.
+- `memories`: project-owned claims and lifecycle metadata.
+- `sources`: project-owned provenance references, not copied source payloads.
+- `links`: explicit conflict and supersession relationships.
+- `touchpoints`: two or more project keys plus memory references across participants.
 
-The mini edition favors inspectability over scale. It is suitable for a repository-sized governed memory set, not a high-volume event stream.
+Touchpoint writes validate that every project and memory exists and that each referenced memory belongs to a participating project. Project context loads its governed memory plus linked participant memory, labeled with its owning project and the touchpoint inclusion reason.
 
 ## Trust model
 
-A record is active truth only when its lifecycle status is active and its review metadata is not unreviewed. Draft, unreviewed, stale, and superseded records are warnings/history. Archived and rejected records are excluded from context.
+Agent-created records are always `unreviewed`. Only human CLI/dashboard operations can register projects, review or reject candidates, supersede memory, or edit touchpoints. Rejected records never enter agent context. Superseded records remain history. High-confidence active claims require evidence, and open conflicts require a reviewed resolution.
 
-High confidence does not create trust by itself. Active high-confidence claims need a source. Conflicts require a separate reviewed resolution. Supersession keeps the old record but prevents it from remaining active.
+Context profiles may trim ordinary content, but cannot silently omit critical warnings or unresolved/broken touchpoints. The audit independently verifies raw references and every rendered profile.
 
-The compact profile prioritizes critical warnings before other content. The audit independently verifies that no critical warning was dropped and that the rendered pack remains within budget.
+Snapshot v2 contains all five canonical collections at an export point. It is portable evidence for CI, not a writable backend.
