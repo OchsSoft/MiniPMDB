@@ -1,0 +1,13 @@
+[
+  { "id": "intro", "duration": 8, "kind": "storyboard" },
+  { "id": "problem", "duration": 12, "kind": "storyboard" },
+  { "id": "audit-fail", "duration": 16, "kind": "storyboard" },
+  { "id": "dashboard-fail", "duration": 18, "kind": "live" },
+  { "id": "context-gate", "duration": 14, "kind": "live" },
+  { "id": "governed-fix", "duration": 14, "kind": "storyboard" },
+  { "id": "dashboard-pass", "duration": 18, "kind": "live" },
+  { "id": "mcp", "duration": 18, "kind": "storyboard" },
+  { "id": "ci", "duration": 16, "kind": "storyboard" },
+  { "id": "build-evidence", "duration": 18, "kind": "storyboard" },
+  { "id": "close", "duration": 10, "kind": "storyboard" }
+]

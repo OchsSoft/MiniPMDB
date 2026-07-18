@@ -1,6 +1,6 @@
 # Build Week video script
 
-Target length: **2 minutes 40 seconds**. Record at 1080p with readable terminal text and spoken narration. Keep the repository and dashboard public-safe before recording.
+The ready-to-narrate cut, exact timestamps, captions, and regeneration instructions now live in [`video/`](../video/README.md). The rendered silent master is **2 minutes 42 seconds** at 1080p/30fps. Keep the repository and dashboard public-safe before recording.
 
 ## 0:00–0:18 — Problem
 

@@ -19,5 +19,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check
+      - run: sh -n judge-demo.sh
       - run: npm test
       - run: npm run smoke
+      - run: npm run judge:dry-run
