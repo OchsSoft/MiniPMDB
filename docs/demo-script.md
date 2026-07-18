@@ -41,7 +41,7 @@ Show the green strict audit, then scroll the context pack to show active OIDC tr
 
 Show the MCP configuration and briefly invoke `memory_audit` or `memory_context` from the primary Codex thread.
 
-> Codex with GPT-5.6 was the primary build environment for the sanitized extraction, audit design, tests, and documentation. The MCP server gives Codex governed context, defaults to read-only, and cannot self-approve a memory even when draft writes are enabled.
+> Codex with GPT-5.6 was the primary build environment for the sanitized extraction, audit design, tests, and documentation. The MCP server defaults to project-draft, where Codex can propose unreviewed memories and attach candidate evidence but cannot approve or reject them. Strict read-only remains available.
 
 Show the `/feedback` session confirmation briefly, without exposing unrelated conversation content.
 

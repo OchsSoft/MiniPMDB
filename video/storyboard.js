@@ -63,10 +63,12 @@ command = "node"
 args = ["/path/to/MiniPMDB/src/mcp.js"]
 cwd = "/path/to/your-project"
 env = { MINIPMDB_STORE =
-  ".minipmdb/store.json" }</pre></div>
+  ".minipmdb/store.json",
+  MINIPMDB_MCP_MODE =
+  "project-draft" }</pre></div>
         <div class="checklist">
-          <div class="check"><span>✓</span><span><strong>Read-only by default</strong><br>Context, audit, and lifecycle inspection.</span></div>
-          <div class="check"><span>✓</span><span><strong>Draft-write is review-first</strong><br>An agent cannot approve its own claim.</span></div>
+          <div class="check"><span>✓</span><span><strong>Project-draft by default</strong><br>Unreviewed candidates plus evidence.</span></div>
+          <div class="check"><span>✓</span><span><strong>Human review stays final</strong><br>Strict read-only is also available.</span></div>
           <div class="check"><span>✓</span><span><strong>Compact without silent risk</strong><br>Critical warnings survive token budgets.</span></div>
         </div>
       </div>

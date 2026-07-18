@@ -13,8 +13,9 @@ Use GitHub's private vulnerability reporting for the repository. Do not open a p
 ## Security posture
 
 - The dashboard binds to `127.0.0.1` and has no remote-access mode.
-- MCP is read-only unless `MINIPMDB_MCP_MODE=draft-write` is explicitly set.
-- Draft-write MCP cannot create reviewed/current truth.
+- MCP defaults to `project-draft`, which can create only unreviewed candidates and attach evidence only to draft or unreviewed candidates in the configured store.
+- Set `MINIPMDB_MCP_MODE=read-only` for a strict no-write MCP connection. `draft-write` is a compatibility alias for `project-draft`.
+- Project-draft MCP cannot approve, reject, supersede, or otherwise create reviewed/current truth.
 - The project has no runtime dependencies, CDN assets, telemetry, or hosted service.
 - Local `.minipmdb/` data and environment files are ignored by Git.
 - The public-source check rejects known private-source vocabulary and absolute Windows user paths.

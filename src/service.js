@@ -55,9 +55,12 @@ export class MiniPMDBService {
     });
   }
 
-  async attachSource(memoryId, input) {
+  async attachSource(memoryId, input, { candidateOnly = false } = {}) {
     return this.store.update((data) => {
       const memory = findMemory(data, memoryId);
+      if (candidateOnly && !["draft", "unreviewed"].includes(memory.status)) {
+        throw new Error(`Evidence can only be attached to a draft or unreviewed candidate in project-draft mode: ${memoryId}.`);
+      }
       const now = new Date().toISOString();
       const source = {
         id: input.id || `src-${randomUUID()}`,

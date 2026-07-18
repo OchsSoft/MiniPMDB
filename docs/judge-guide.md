@@ -56,8 +56,9 @@ The disposable dry run verifies that:
 - the strict CLI audit exits nonzero with the three expected governance findings;
 - compact context separates reviewed truth from a critical warning;
 - the governed resolution makes the identical strict audit pass;
-- the local dashboard API reproduces the blocked-to-passing flow; and
-- read-only MCP exposes context, audit, and lifecycle inspection without a write or self-approval path.
+- the local dashboard API reproduces the blocked-to-passing flow;
+- default project-draft MCP creates unreviewed candidates and attaches candidate evidence without changing review state; and
+- strict read-only MCP exposes context, audit, and lifecycle inspection without a write or self-approval path.
 
 It removes its temporary store when complete and prints `Judge dry run: PASS` only after every assertion succeeds.
 

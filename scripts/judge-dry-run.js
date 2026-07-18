@@ -61,7 +61,7 @@ try {
   pass("the loopback dashboard API reproduces the complete blocked-to-passing flow");
 
   const draftResponses = await runMcp(storePath, {
-    mode: "draft-write",
+    mode: "project-draft",
     messages: [
       { jsonrpc: "2.0", id: 10, method: "initialize", params: { protocolVersion: "2025-03-26" } },
       {
@@ -97,7 +97,7 @@ try {
   });
   assert.match(
     draftResponses.find((message) => message.id === 10).result.instructions,
-    /permission mode.*unreviewed candidates/i
+    /project-draft.*configured project store/i
   );
   const approvedMemory = draftResponses.find((message) => message.id === 11).result.structuredContent.memory;
   const rejectedMemory = draftResponses.find((message) => message.id === 12).result.structuredContent.memory;
@@ -108,13 +108,25 @@ try {
   const pending = expectCliJson(["list", "--status", "unreviewed", "--json", "--store", storePath]);
   assert(pending.memories.some((memory) => memory.id === approvedId));
   assert(pending.memories.some((memory) => memory.id === rejectedId));
-  expectCliSuccess([
-    "source", "attach", approvedId,
-    "--type", "file",
-    "--label", "Runtime declaration",
-    "--ref", "package.json#engines",
-    "--store", storePath
-  ]);
+  const sourceResponses = await runMcp(storePath, {
+    mode: "project-draft",
+    messages: [{
+      jsonrpc: "2.0",
+      id: 13,
+      method: "tools/call",
+      params: {
+        name: "source_attach",
+        arguments: {
+          memory_id: approvedId,
+          type: "file",
+          label: "Runtime declaration",
+          ref: "package.json#engines"
+        }
+      }
+    }]
+  });
+  assert.equal(sourceResponses[0].result.structuredContent.memory.status, "unreviewed");
+  assert.equal(sourceResponses[0].result.structuredContent.source.ref, "package.json#engines");
   expectCliSuccess([
     "review", approvedId,
     "--status", "reviewed",
@@ -139,9 +151,9 @@ try {
   ]);
   assert.match(reviewedContext.context_pack, /Use the supported Node\.js runtime/);
   assert.doesNotMatch(reviewedContext.context_pack, /Candidate that should not persist/);
-  pass("draft-write MCP creates only unreviewed candidates; a human can source, approve, or reject them");
+  pass("project-draft MCP creates unreviewed candidates and evidence; a human approves or rejects them");
 
-  const mcpResponses = await runMcp(storePath);
+  const mcpResponses = await runMcp(storePath, { mode: "read-only" });
   const tools = mcpResponses.find((message) => message.id === 2).result.tools;
   assert.deepEqual(tools.map((tool) => tool.name), ["memory_context", "memory_audit", "memory_list"]);
   assert(tools.every((tool) => tool.annotations.readOnlyHint === true));
@@ -193,7 +205,7 @@ async function fetchText(url) {
   return response.text();
 }
 
-function runMcp(mcpStorePath, { mode = "read-only", messages } = {}) {
+function runMcp(mcpStorePath, { mode = "project-draft", messages } = {}) {
   const requests = messages || [
     { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
     { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },

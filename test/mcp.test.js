@@ -8,16 +8,19 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const storePath = path.join(root, "examples", "release-guard", "resolved.json");
 
 test("read-only MCP lists only read tools and returns governed context", async () => {
-  const responses = await runMcp([
-    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
-    { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
-    {
-      jsonrpc: "2.0",
-      id: 3,
-      method: "tools/call",
-      params: { name: "memory_context", arguments: { task: "release", profile: "compact" } }
-    }
-  ]);
+  const responses = await runMcp(
+    [
+      { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
+      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+      {
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: "memory_context", arguments: { task: "release", profile: "compact" } }
+      }
+    ],
+    { MINIPMDB_MCP_MODE: "read-only" }
+  );
   const listed = responses.find((response) => response.id === 2).result.tools;
   assert.match(responses.find((response) => response.id === 1).result.instructions, /read-only/i);
   assert(!listed.some((tool) => tool.name === "memory_remember"));
@@ -27,20 +30,47 @@ test("read-only MCP lists only read tools and returns governed context", async (
   assert.match(context.content[0].text, /Warnings and history/);
 });
 
-test("draft-write MCP advertises constrained memory creation", async () => {
+test("project-draft MCP advertises constrained candidate and evidence writes", async () => {
   const responses = await runMcp(
     [
       { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
-      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }
-    ],
-    { MINIPMDB_MCP_MODE: "draft-write" }
+      { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
+      {
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: {
+          name: "source_attach",
+          arguments: {
+            memory_id: "mem-oidc-release",
+            type: "file",
+            label: "Untrusted new evidence",
+            ref: "README.md"
+          }
+        }
+      }
+    ]
   );
-  assert.match(responses.find((response) => response.id === 1).result.instructions, /permission mode.*unreviewed candidates/i);
-  const remembered = responses.find((response) => response.id === 2).result.tools
-    .find((tool) => tool.name === "memory_remember");
+  assert.match(responses.find((response) => response.id === 1).result.instructions, /project-draft.*configured project store/i);
+  const tools = responses.find((response) => response.id === 2).result.tools;
+  const remembered = tools.find((tool) => tool.name === "memory_remember");
   assert(remembered);
+  assert(tools.some((tool) => tool.name === "source_attach"));
   assert.equal(remembered.annotations.readOnlyHint, false);
   assert.equal(remembered.annotations.destructiveHint, false);
+  assert.match(
+    responses.find((response) => response.id === 4).error.message,
+    /only be attached to a draft or unreviewed candidate/i
+  );
+
+  const aliasResponses = await runMcp(
+    [{ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }],
+    { MINIPMDB_MCP_MODE: "draft-write" }
+  );
+  assert.deepEqual(
+    aliasResponses[0].result.tools.map((tool) => tool.name),
+    tools.map((tool) => tool.name)
+  );
 });
 
 function runMcp(messages, extraEnv = {}) {

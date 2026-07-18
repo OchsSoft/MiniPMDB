@@ -38,8 +38,8 @@ The final public commit range and release tag will provide the corresponding sou
 1. Run `npm run judge:demo` or use the platform launcher documented in [`docs/judge-guide.md`](docs/judge-guide.md).
 2. In the dashboard, observe the blocked strict audit and the unsafe claim separated into warnings.
 3. Select **Apply governed fix** and observe the passing audit, reviewed OIDC truth, and retained historical warning.
-4. Optionally run `npm run judge:dry-run` for an automated proof across CLI, context, HTTP API, and read-only MCP.
+4. Optionally run `npm run judge:dry-run` for an automated proof across CLI, context, HTTP API, project-draft candidate/evidence intake, and strict read-only MCP.
 5. Run `npm test` to inspect the focused unit and integration suite.
-6. For a flexible evaluation beyond the prepared fixture, follow [`docs/try-your-project.md`](docs/try-your-project.md) to let an agent draft memories from another local repository and then approve or reject them at the human gate.
+6. For a flexible evaluation beyond the prepared fixture, follow [`docs/try-your-project.md`](docs/try-your-project.md) to let an agent create unreviewed candidates from another local repository and then approve or reject them at the human gate.
 
 The full flow requires no account, secret, model API call, container, or external database.
