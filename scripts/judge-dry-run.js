@@ -22,11 +22,12 @@ let externalMongo;
 
 try {
   await Promise.all([fs.mkdir(projectAPath), fs.mkdir(projectBPath), fs.mkdir(binaryDirectory, { recursive: true })]);
+  const [projectARealPath, projectBRealPath] = await Promise.all([fs.realpath(projectAPath), fs.realpath(projectBPath)]);
   const seed = await loadSnapshotFile(path.join(root, "examples", "release-guard", "initial.json"));
   seed.projects.find((item) => item.key === "paper-crane-cli").repo_path = projectAPath;
-  seed.projects.find((item) => item.key === "paper-crane-cli").repo_root = canonical(projectAPath);
+  seed.projects.find((item) => item.key === "paper-crane-cli").repo_root = canonical(projectARealPath);
   seed.projects.find((item) => item.key === "release-relay").repo_path = projectBPath;
-  seed.projects.find((item) => item.key === "release-relay").repo_root = canonical(projectBPath);
+  seed.projects.find((item) => item.key === "release-relay").repo_root = canonical(projectBRealPath);
   process.stdout.write("MiniPMDB judge dry run\n");
 
   running = await startMiniPMDBServer({ home: path.join(directory, "managed-home"), port: 0, seed });
@@ -50,24 +51,24 @@ try {
     { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
     { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "memory_remember", arguments: { kind: "constraint", confidence: "high", title: "Use the supported Node runtime", body: "MiniPMDB requires Node.js 20.19 or newer." } } }
   ]);
-  const memory = draft.find((item) => item.id === 3).result.structuredContent.memory;
+  const memory = responseFor(draft, 3).result.structuredContent.memory;
   assert.equal(memory.project_key, "paper-crane-cli");
   assert.equal(memory.status, "unreviewed");
   const attached = await runMcp(running.url, projectAPath, "project-draft", [
     { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "source_attach", arguments: { memory_id: memory.id, type: "file", label: "Runtime declaration", ref: "package.json#engines" } } }
   ]);
-  assert.equal(attached[0].result.structuredContent.memory.status, "unreviewed");
+  assert.equal(responseFor(attached, 4).result.structuredContent.memory.status, "unreviewed");
   await post(running.url, `/api/memories/${memory.id}/review`, { status: "reviewed", reviewer: "judge", note: "Verified." });
   const crossProjectAttach = await runMcp(running.url, projectAPath, "project-draft", [
     { jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "source_attach", arguments: { memory_id: "mem-relay-oidc", type: "file", label: "Wrong project", ref: "README.md" } } }
   ]);
-  assert.match(crossProjectAttach[0].error.message, /outside paper-crane-cli/i);
+  assert.match(responseFor(crossProjectAttach, 5).error.message, /outside paper-crane-cli/i);
   pass("project-draft creates only unreviewed local candidates and cannot write the other project");
 
   const readOnly = await runMcp(running.url, projectAPath, "read-only", [
     { jsonrpc: "2.0", id: 6, method: "tools/list", params: {} }
   ]);
-  assert.deepEqual(readOnly[0].result.tools.map((item) => item.name), ["memory_context", "memory_audit", "memory_list"]);
+  assert.deepEqual(responseFor(readOnly, 6).result.tools.map((item) => item.name), ["memory_context", "memory_audit", "memory_list"]);
   pass("strict read-only exposes no write tools");
 
   const runtimeTest = await post(running.url, "/api/runtime/test", { uri: running.runtime.database.uri, db_name: running.runtime.database.dbName });
@@ -138,6 +139,12 @@ function runMcp(apiUrl, cwd, mode, messages) {
 function canonical(value) {
   const resolved = path.resolve(value);
   return process.platform === "win32" ? resolved.toLowerCase() : resolved;
+}
+
+function responseFor(responses, id) {
+  const response = responses.find((item) => item.id === id);
+  assert(response, `Missing JSON-RPC response ${id}: ${JSON.stringify(responses)}`);
+  return response;
 }
 
 function pass(message) {
