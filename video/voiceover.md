@@ -32,7 +32,7 @@ The live dashboard turns green. The agent receives clean active truth, while the
 
 ## 01:40–01:58 · Codex MCP
 
-Through MCP, Codex can request governed context, run the same audit, or inspect lifecycle state. The server is read-only by default, and draft-write mode still cannot let an agent approve its own memory.
+Through MCP, Codex can request governed context, run the audit, or inspect lifecycle state. Project-draft mode can propose unreviewed memories and attach evidence here, but only a human can approve them. Strict read-only remains available.
 
 ## 01:58–02:14 · CI and open source
 

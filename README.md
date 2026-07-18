@@ -16,7 +16,7 @@ npm run judge:demo
 
 The command loads a synthetic unsafe-memory example, starts the loopback dashboard, and opens it in your browser. Select **Apply governed fix** to see the strict audit move from blocked to passing without deleting the historical warning. On Windows, `judge-demo.cmd` provides the same path by double-click; macOS and Linux users can run `./judge-demo.sh`.
 
-For a non-interactive proof of the complete CLI, context, dashboard API, and read-only MCP path:
+For a non-interactive proof of the complete CLI, context, dashboard API, default project-draft MCP path, and strict read-only mode:
 
 ```console
 npm run judge:dry-run
@@ -65,7 +65,7 @@ Open `http://127.0.0.1:8797`. The dashboard's two demo buttons reproduce the sam
 
 ## Use it from Codex through MCP
 
-MiniPMDB defaults to read-only MCP. Add this to your Codex configuration, replacing the path with your checkout:
+MiniPMDB defaults to `project-draft`: the connected agent can read governed context, propose unreviewed memories, and attach evidence to those candidates inside the configured project store. Add this to your Codex configuration, replacing the path with your checkout:
 
 ```toml
 [mcp_servers.minipmdb]
@@ -81,7 +81,14 @@ Available read tools:
 - `memory_audit` runs the same governance checks as CI.
 - `memory_list` exposes the local lifecycle state for inspection.
 
-Set `MINIPMDB_MCP_MODE=draft-write` to expose `memory_remember`. MCP writes are forcibly draft/unreviewed; an agent cannot approve its own claim. Review stays an explicit CLI or maintainer action.
+Default project-draft mode also exposes:
+
+- `memory_remember` creates a candidate with lifecycle status `unreviewed`.
+- `source_attach` adds evidence only to a `draft` or `unreviewed` candidate and does not promote it.
+
+**Project-draft names the MCP permission boundary, not the stored lifecycle state.** An agent cannot approve or reject its own claim; review stays an explicit CLI or maintainer action. Set `MINIPMDB_MCP_MODE=read-only` for a strict no-write connection. `draft-write` remains accepted as a compatibility alias for `project-draft`.
+
+To exercise that full workflow on a repository of your own, follow [Try MiniPMDB on your own project](docs/try-your-project.md) and paste the [copy-ready draft-memory intake prompt](docs/prompts/draft-memory-intake.md) into a new Codex task. The guide covers local store initialization, MCP configuration, unreviewed candidate creation, evidence attachment, human approval or rejection, and final audit/context verification.
 
 The MCP tool schemas include read-only, destructive, and open-world annotations that match their behavior. See the official [Codex MCP documentation](https://developers.openai.com/codex/mcp/) for configuration concepts.
 
@@ -102,6 +109,7 @@ The action has no install step and receives only read access from the workflow. 
 
 ```text
 minipmdb init --project <key> --name <name>
+minipmdb list [--status unreviewed|reviewed|rejected|...]
 minipmdb remember --title <title> --body <body> [--kind decision]
 minipmdb source attach <memory-id> --label <label> --ref <reference>
 minipmdb review <memory-id> [--status reviewed]

@@ -60,7 +60,100 @@ try {
   assert.match(apiContext.context_pack, /\[WARNING\].*registry token/is);
   pass("the loopback dashboard API reproduces the complete blocked-to-passing flow");
 
-  const mcpResponses = await runMcp(storePath);
+  const draftResponses = await runMcp(storePath, {
+    mode: "project-draft",
+    messages: [
+      { jsonrpc: "2.0", id: 10, method: "initialize", params: { protocolVersion: "2025-03-26" } },
+      {
+        jsonrpc: "2.0",
+        id: 11,
+        method: "tools/call",
+        params: {
+          name: "memory_remember",
+          arguments: {
+            kind: "constraint",
+            confidence: "high",
+            title: "Use the supported Node.js runtime",
+            body: "This project requires Node.js 20 or newer for its local commands.",
+            tags: ["runtime", "node"]
+          }
+        }
+      },
+      {
+        jsonrpc: "2.0",
+        id: 12,
+        method: "tools/call",
+        params: {
+          name: "memory_remember",
+          arguments: {
+            kind: "note",
+            confidence: "low",
+            title: "Candidate that should not persist",
+            body: "This intentionally disposable observation is not durable project truth."
+          }
+        }
+      }
+    ]
+  });
+  assert.match(
+    draftResponses.find((message) => message.id === 10).result.instructions,
+    /project-draft.*configured project store/i
+  );
+  const approvedMemory = draftResponses.find((message) => message.id === 11).result.structuredContent.memory;
+  const rejectedMemory = draftResponses.find((message) => message.id === 12).result.structuredContent.memory;
+  assert.equal(approvedMemory.status, "unreviewed");
+  assert.equal(rejectedMemory.status, "unreviewed");
+  const approvedId = approvedMemory.id;
+  const rejectedId = rejectedMemory.id;
+  const pending = expectCliJson(["list", "--status", "unreviewed", "--json", "--store", storePath]);
+  assert(pending.memories.some((memory) => memory.id === approvedId));
+  assert(pending.memories.some((memory) => memory.id === rejectedId));
+  const sourceResponses = await runMcp(storePath, {
+    mode: "project-draft",
+    messages: [{
+      jsonrpc: "2.0",
+      id: 13,
+      method: "tools/call",
+      params: {
+        name: "source_attach",
+        arguments: {
+          memory_id: approvedId,
+          type: "file",
+          label: "Runtime declaration",
+          ref: "package.json#engines"
+        }
+      }
+    }]
+  });
+  assert.equal(sourceResponses[0].result.structuredContent.memory.status, "unreviewed");
+  assert.equal(sourceResponses[0].result.structuredContent.source.ref, "package.json#engines");
+  expectCliSuccess([
+    "review", approvedId,
+    "--status", "reviewed",
+    "--reviewer", "judge",
+    "--note", "Verified against the runtime declaration.",
+    "--store", storePath
+  ]);
+
+  expectCliSuccess([
+    "review", rejectedId,
+    "--status", "rejected",
+    "--reviewer", "judge",
+    "--note", "Transient rather than durable.",
+    "--store", storePath
+  ]);
+  const rejected = expectCliJson(["list", "--status", "rejected", "--json", "--store", storePath]);
+  assert(rejected.memories.some((memory) => memory.id === rejectedId));
+  const reviewedAudit = expectCliJson(["audit", "--strict", "--json", "--store", storePath]);
+  assert.equal(reviewedAudit.passed, true);
+  const reviewedContext = expectCliJson([
+    "context", "--profile", "balanced", "--task", "run the project", "--json", "--store", storePath
+  ]);
+  assert.match(reviewedContext.context_pack, /Use the supported Node\.js runtime/);
+  assert.doesNotMatch(reviewedContext.context_pack, /Candidate that should not persist/);
+  pass("project-draft MCP creates unreviewed candidates and evidence; a human approves or rejects them");
+
+  const mcpResponses = await runMcp(storePath, { mode: "read-only" });
   const tools = mcpResponses.find((message) => message.id === 2).result.tools;
   assert.deepEqual(tools.map((tool) => tool.name), ["memory_context", "memory_audit", "memory_list"]);
   assert(tools.every((tool) => tool.annotations.readOnlyHint === true));
@@ -112,8 +205,8 @@ async function fetchText(url) {
   return response.text();
 }
 
-function runMcp(mcpStorePath) {
-  const messages = [
+function runMcp(mcpStorePath, { mode = "project-draft", messages } = {}) {
+  const requests = messages || [
     { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
     { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
     {
@@ -126,7 +219,7 @@ function runMcp(mcpStorePath) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [path.join(root, "src", "mcp.js")], {
       cwd: root,
-      env: { ...process.env, MINIPMDB_STORE: mcpStorePath },
+      env: { ...process.env, MINIPMDB_STORE: mcpStorePath, MINIPMDB_MCP_MODE: mode },
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true
     });
@@ -144,7 +237,7 @@ function runMcp(mcpStorePath) {
       if (code !== 0) return reject(new Error(`MCP exited ${code}: ${stderr}`));
       resolve(stdout.trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)));
     });
-    child.stdin.end(`${messages.map((message) => JSON.stringify(message)).join("\n")}\n`);
+    child.stdin.end(`${requests.map((message) => JSON.stringify(message)).join("\n")}\n`);
   });
 }
 

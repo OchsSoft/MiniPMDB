@@ -20,7 +20,7 @@ GitHub Action ─────▶│              │
 - `service.js` owns review-first mutations and the synthetic resolution operation.
 - `context.js` ranks reviewed truth and warnings deterministically, then enforces exact profile budgets.
 - `audit.js` evaluates raw lifecycle/provenance integrity and the output of every context profile.
-- `mcp.js` exposes read tools by default and one constrained draft-write tool when explicitly enabled.
+- `mcp.js` defaults to project-draft: read tools plus constrained unreviewed-candidate creation and candidate evidence attachment. Explicit read-only removes every write tool; neither mode exposes review decisions.
 - `api.js` serves read APIs, two synthetic demo operations, and the static local dashboard on loopback.
 - `cli.js` is the human and CI interface.
 

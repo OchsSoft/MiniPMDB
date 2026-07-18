@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatAuditReport } from "./audit.js";
+import { MEMORY_STATUSES, assertEnum } from "./constants.js";
 import { MiniPMDBService, applyReleaseDemoFix } from "./service.js";
 import { DEFAULT_STORE_PATH } from "./store.js";
 
@@ -27,6 +28,17 @@ async function run(input) {
         projectName: input.flags.name || "My project"
       });
       printJsonOrText(input, store, `Initialized MiniPMDB for ${store.project.name} at ${path.resolve(storePath)}.`);
+      return;
+    }
+    case "list": {
+      const store = await service.read();
+      const status = input.flags.status
+        ? assertEnum(input.flags.status, MEMORY_STATUSES, "status")
+        : "";
+      const memories = status
+        ? store.memories.filter((memory) => memory.status === status)
+        : store.memories;
+      printJsonOrText(input, { memories }, formatMemoryList(memories, status));
       return;
     }
     case "audit": {
@@ -168,11 +180,23 @@ function requireFlags(flags, names) {
   if (missing.length) throw new Error(`Missing required flags: ${missing.map((name) => `--${name}`).join(", ")}.`);
 }
 
+function formatMemoryList(memories, status) {
+  const heading = status ? `MiniPMDB memories with status ${status}` : "MiniPMDB memories";
+  if (!memories.length) return `${heading}: none.`;
+  return [
+    `${heading}: ${memories.length}`,
+    ...memories.map((memory) =>
+      `- ${memory.id} | ${memory.status} | ${memory.kind}/${memory.confidence} | ${memory.title}`
+    )
+  ].join("\n");
+}
+
 function helpText() {
   return `MiniPMDB — governed project memory for coding agents
 
 Usage:
   minipmdb init --project <key> --name <name>
+  minipmdb list [--status draft|unreviewed|reviewed|rejected|...]
   minipmdb audit [--strict] [--json]
   minipmdb context --task <task> [--profile drift_guard|balanced|compact]
   minipmdb remember --title <title> --body <body> [--kind decision]

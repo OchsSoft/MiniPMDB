@@ -4,7 +4,7 @@
 - Keep the product focused on durable memory governance: provenance, lifecycle, conflicts, supersession, deterministic context, and CI audits.
 - Do not add task execution, shell execution, deployment control, transcript capture, or remote hosting.
 - Use Node.js 20+ built-ins. New runtime dependencies require explicit justification.
-- MCP is read-only by default. Agent-originated writes must remain draft or unreviewed.
+- MCP defaults to project-draft: agent writes are limited to unreviewed candidates and candidate evidence in the configured store. Use explicit read-only mode for no-write access. Agents cannot approve or reject memories.
 - Use synthetic fixtures only. Never store credentials, raw reasoning, private conversations, or customer data.
 - Work on topic branches after the initial repository commit and open pull requests; do not auto-merge.
 - Keep source files under 1,000 lines.

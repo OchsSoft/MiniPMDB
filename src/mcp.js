@@ -3,13 +3,17 @@ import readline from "node:readline";
 import { MiniPMDBService } from "./service.js";
 import { DEFAULT_STORE_PATH } from "./store.js";
 
-const mode = String(process.env.MINIPMDB_MCP_MODE || "read-only").toLowerCase();
-if (!["read-only", "draft-write"].includes(mode)) {
-  throw new Error("MINIPMDB_MCP_MODE must be read-only or draft-write.");
+const mode = String(process.env.MINIPMDB_MCP_MODE || "project-draft").toLowerCase();
+if (!["read-only", "project-draft", "draft-write"].includes(mode)) {
+  throw new Error("MINIPMDB_MCP_MODE must be read-only, project-draft, or draft-write.");
 }
 
 const service = new MiniPMDBService({ storePath: process.env.MINIPMDB_STORE || DEFAULT_STORE_PATH });
 const tools = buildTools(mode);
+const canDraft = mode !== "read-only";
+const instructions = canDraft
+  ? "Project-draft scopes writes to this configured project store. memory_remember persists unreviewed candidates, and source_attach adds evidence to those candidates without approving them. Record only durable, non-secret facts and return created IDs for human review. Never claim that a candidate is approved. A human must approve or reject it with the MiniPMDB CLI."
+  : "Read governed context before project work. Treat warnings and history separately from active project truth. This server is strictly read-only; do not claim that you recorded, sourced, approved, rejected, or changed a memory.";
 const input = readline.createInterface({ input: process.stdin, terminal: false });
 
 input.on("line", async (line) => {
@@ -37,7 +41,8 @@ async function handle(message) {
       return {
         protocolVersion: message.params?.protocolVersion || "2025-03-26",
         capabilities: { tools: {} },
-        serverInfo: { name: "minipmdb", version: "0.1.0" }
+        serverInfo: { name: "minipmdb", version: "0.1.0" },
+        instructions
       };
     case "ping":
       return {};
@@ -74,10 +79,20 @@ async function callTool(name, args) {
       : store.memories;
     return result(JSON.stringify(memories, null, 2), { memories });
   }
-  if (name === "memory_remember" && mode === "draft-write") {
+  if (name === "memory_remember" && canDraft) {
     const store = await service.remember(args, { reviewFirst: true });
     const memory = store.memories.at(-1);
     return result(`Recorded ${memory.id} as ${memory.status}; human review is still required.`, { memory });
+  }
+  if (name === "source_attach" && canDraft) {
+    const store = await service.attachSource(args.memory_id, {
+      type: args.type || "doc",
+      label: args.label,
+      ref: args.ref
+    }, { candidateOnly: true });
+    const memory = store.memories.find((item) => item.id === args.memory_id);
+    const source = store.sources.at(-1);
+    return result(`Attached ${source.id} to ${memory.id}; human review is still required.`, { memory, source });
   }
   throw new Error(`Unknown or disabled tool: ${name}`);
 }
@@ -107,10 +122,10 @@ function buildTools(mcpMode) {
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
     }
   ];
-  if (mcpMode === "draft-write") {
+  if (mcpMode !== "read-only") {
     definitions.push({
       name: "memory_remember",
-      description: "Record a draft or unreviewed project memory. This tool cannot self-approve agent claims.",
+      description: "Record an unreviewed project-memory candidate. This tool cannot self-approve agent claims.",
       inputSchema: objectSchema({
         title: { type: "string" },
         body: { type: "string" },
@@ -120,6 +135,17 @@ function buildTools(mcpMode) {
         source_ids: { type: "array", items: { type: "string" } },
         critical: { type: "boolean" }
       }, ["title", "body"]),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
+    });
+    definitions.push({
+      name: "source_attach",
+      description: "Attach project evidence to a draft or unreviewed candidate without changing its review status.",
+      inputSchema: objectSchema({
+        memory_id: { type: "string" },
+        type: { type: "string", enum: ["file", "commit", "pr", "issue", "chat", "doc", "command", "url"] },
+        label: { type: "string" },
+        ref: { type: "string" }
+      }, ["memory_id", "label", "ref"]),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
     });
   }
