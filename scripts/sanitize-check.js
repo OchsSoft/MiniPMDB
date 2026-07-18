@@ -5,7 +5,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const excluded = new Set([".git", ".minipmdb", "node_modules", "coverage", "dist"]);
-const excludedPaths = new Set([".video-tools", "video/.work", "video/output"]);
+const excludedPaths = new Set([".video-tools", "video/.work", "video/live-captures", "video/output"]);
 const privateTerms = [
   ["Over", "lair"].join(""),
   ["Hearth", "Loop"].join(""),

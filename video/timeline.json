@@ -1,13 +1,11 @@
 [
-  { "id": "intro", "duration": 10, "kind": "storyboard" },
-  { "id": "problem", "duration": 14, "kind": "storyboard" },
-  { "id": "audit-fail", "duration": 16, "kind": "storyboard" },
-  { "id": "dashboard-fail", "duration": 20, "kind": "live" },
-  { "id": "context-gate", "duration": 15, "kind": "live" },
-  { "id": "governed-fix", "duration": 15, "kind": "storyboard" },
-  { "id": "dashboard-pass", "duration": 20, "kind": "live" },
-  { "id": "mcp", "duration": 20, "kind": "storyboard" },
-  { "id": "ci", "duration": 16, "kind": "storyboard" },
-  { "id": "build-evidence", "duration": 16, "kind": "storyboard" },
-  { "id": "close", "duration": 8, "kind": "storyboard" }
+  { "id": "01-blocked-overview", "duration": 15, "kind": "live" },
+  { "id": "02-context-touchpoint", "duration": 25, "kind": "live" },
+  { "id": "03-review-and-lifecycle", "duration": 20, "kind": "live" },
+  { "id": "04-apply-governed-fix", "duration": 20, "kind": "live" },
+  { "id": "05-passing-history", "duration": 25, "kind": "live" },
+  { "id": "06-switch-project", "duration": 20, "kind": "live" },
+  { "id": "07-reciprocal-context", "duration": 20, "kind": "live" },
+  { "id": "08-storage-runtime", "duration": 15, "kind": "live" },
+  { "id": "09-passing-close", "duration": 10, "kind": "live" }
 ]
