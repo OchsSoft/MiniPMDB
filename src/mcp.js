@@ -12,8 +12,15 @@ const instructions = canDraft
   ? "Project-draft is scoped to the registered project matching this MCP working directory. memory_remember creates only unreviewed candidates and source_attach adds evidence without approval. A human must approve or reject candidates in the MiniPMDB dashboard or CLI."
   : "This MiniPMDB connection is strictly read-only. Treat warnings and cross-project touchpoint context separately from reviewed project truth.";
 const input = readline.createInterface({ input: process.stdin, terminal: false });
+let messageQueue = Promise.resolve();
 
-input.on("line", async (line) => {
+input.on("line", (line) => {
+  messageQueue = messageQueue.then(() => processLine(line)).catch((error) => {
+    write({ jsonrpc: "2.0", id: null, error: { code: -32603, message: error.message } });
+  });
+});
+
+async function processLine(line) {
   if (!line.trim()) return;
   let message;
   try {
@@ -28,7 +35,7 @@ input.on("line", async (line) => {
   } catch (error) {
     if (message.id !== undefined) write({ jsonrpc: "2.0", id: message.id, error: { code: -32000, message: error.message } });
   }
-});
+}
 
 async function handle(message) {
   if (message.method === "initialize") return { protocolVersion: message.params?.protocolVersion || "2025-03-26", capabilities: { tools: {} }, serverInfo: { name: "minipmdb", version: "0.1.0" }, instructions };
