@@ -1,47 +1,39 @@
-# MiniPMDB voiceover
+# MiniPMDB live-demo voiceover
 
-Read naturally at roughly 120 words per minute. Each block has a short edit handle at the end.
+Read naturally at roughly 120 words per minute. Every visual is a recording of the real loopback application using synthetic data.
 
-## 00:00–00:10 · Intro
+## 00:00-00:15 - Live blocked overview
 
-Coding agents can remember more than ever. MiniPMDB makes sure remembered information is actually safe to trust—even when two projects share a contract.
+MiniPMDB is CI for cross-project agent memory. This is the real local application running against its managed MongoDB. Paper Crane and Release Relay disagree about the same release-auth contract.
 
-## 00:10–00:24 · The collision
+## 00:15-00:40 - Context and touchpoint
 
-Here, Paper Crane says releases need a long-lived token. Release Relay's reviewed contract accepts only OIDC. Their shared touchpoint makes the contradiction visible to both projects.
+The strict audit blocks the run. The token claim is unreviewed, high-confidence but unsourced, part of an unresolved conflict, and attached to a broken touchpoint. Paper Crane sees Release Relay's reviewed OIDC requirement only because that touchpoint explicitly names both projects.
 
-## 00:24–00:40 · Strict failure
+## 00:40-01:00 - Human review and canonical history
 
-The strict audit fails closed. The token claim is unreviewed, high-confidence but unsourced, part of an open conflict, and attached to a broken touchpoint. It never enters active truth.
+The shared contract and review queue are human-controlled. An agent cannot self-approve, reject another project's truth, or edit the touchpoint. The lifecycle below comes directly from MongoDB, including evidence, ownership, and pending review state.
 
-## 00:40–01:00 · Mongo-backed dashboard
+## 01:00-01:20 - Governed resolution
 
-This is the live local dashboard backed by a real managed MongoDB—not a slide or JSON write backend. The runtime, two projects, lifecycle state, review queue, and shared contract all come from the canonical database.
+Now watch the actual state transition. Applying the governed fix creates a reviewed resolution, supersedes the unsafe token claim, and repairs the touchpoint. Nothing is deleted, but the strict audit changes from blocked to passing.
 
-## 01:00–01:15 · Context gate
+## 01:20-01:45 - Passing audit with history intact
 
-Paper Crane can see Release Relay's reviewed memory only because the touchpoint names both projects. The unsafe local claim stays in warnings, and compact context cannot silently hide the broken contract.
+The same live dashboard now has zero findings. OIDC is active truth, the other project's memory is labeled inside the context pack, and the superseded token claim remains visible in history instead of being rewritten away.
 
-## 01:15–01:30 · Governed fix
+## 01:45-02:05 - Switch project scope
 
-The human-controlled fix adds a reviewed resolution, supersedes the token claim, and repairs the touchpoint. History remains intact while the strict audit becomes clean.
+Switching to Release Relay changes the active project without changing the canonical records. This is also how project-draft MCP is scoped: Codex can propose only unreviewed candidates for the repository matching its working directory.
 
-## 01:30–01:50 · Passing state
+## 02:05-02:25 - Reciprocal cross-project context
 
-The same dashboard now passes. OIDC is active truth, the other project's inclusion is labeled, and the old claim remains inspectable instead of being rewritten out of history.
+The reciprocal view proves the touchpoint is shared rather than copied into isolated files. Both projects can inspect the same governed relationship, while rejected or unrelated memories stay out of generated context.
 
-## 01:50–02:10 · Codex MCP
+## 02:25-02:40 - Real runtime choices
 
-Through MCP, Codex gets governed context and can propose unreviewed memories with evidence for its registered project. It cannot write another project, self-approve, or edit touchpoints. Strict read-only removes writes entirely.
+Managed MongoDB is the default, bound to loopback. The same application can use an external local, Podman, or Docker Mongo instance. The public CI validates managed runtimes, Compose configuration, and Podman restart persistence.
 
-## 02:10–02:26 · CI artifact
+## 02:40-02:50 - Close
 
-MongoDB stays canonical. A reviewed snapshot exports all five collections, and the dependency-free GitHub Action audits that artifact on Windows, Ubuntu, and macOS without creating a second backend.
-
-## 02:26–02:42 · Build evidence
-
-Codex with GPT-five-point-six was the primary Build Week environment—from the product thesis and Mongo pivot through implementation, sanitization, tests, public documentation, and this demo package.
-
-## 02:42–02:50 · Close
-
-Other tools help agents remember. MiniPMDB helps teams decide what agents are allowed to trust across projects. It is open source on GitHub.
+Built during Build Week with Codex and GPT-five-point-six, MiniPMDB helps teams decide what agents may trust across projects. It is open source on GitHub.

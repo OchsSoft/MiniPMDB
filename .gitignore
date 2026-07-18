@@ -10,4 +10,5 @@ dist/
 .DS_Store
 Thumbs.db
 video/.work/
+video/live-captures/
 video/output/
