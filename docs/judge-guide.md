@@ -1,83 +1,54 @@
 # MiniPMDB judge guide
 
-MiniPMDB is designed to be evaluated as a working local developer tool, not as a slide deck or hosted mockup. The fastest visual path takes about three minutes and uses only synthetic data.
+MiniPMDB is a working local developer tool. The fastest visual evaluation takes about three minutes and uses only synthetic data.
 
-## Requirements and supported platforms
+## Requirements
 
-- Node.js 20 or newer.
-- Windows 10/11, macOS, or a maintained Linux distribution.
-- Any current browser for the local dashboard.
+- Node.js 20.19 or newer.
+- Network access on first managed start for the pinned MongoDB Community Server download.
+- A current browser.
 
-No install step, package download, account, API key, database, model call, or container is required. The dashboard binds only to `127.0.0.1`, and the demo makes no outbound network requests.
+No account, API key, model call, preinstalled database, or container is required. The API, dashboard, and managed database bind only to `127.0.0.1`.
 
-The project is validated locally on Windows and by GitHub Actions on Ubuntu. The universal `npm` commands work on all supported platforms; the convenience launchers use the platform's normal browser-opening command.
-
-## Three-minute visual path
-
-From an extracted source archive or cloned repository, run:
+## Three-minute route
 
 ```console
+npm ci --ignore-scripts
 npm run judge:demo
 ```
 
-Windows users can instead double-click `judge-demo.cmd`. On macOS or Linux:
+Windows users may run `judge-demo.cmd`; macOS and Linux users may run `./judge-demo.sh`. If port 8797 is occupied, use `npm run judge:demo -- --port 8800`.
 
-```console
-./judge-demo.sh
-```
+1. Confirm the runtime panel reports Managed MongoDB 8.2.6 and a masked loopback endpoint.
+2. Select Paper Crane CLI and observe the blocked strict audit.
+3. Read the broken Release authentication contract touchpoint. Paper Crane context includes the labeled Release Relay contract because both participate.
+4. Observe the unreviewed, unsourced long-lived-token claim in the review queue.
+5. Select **Apply governed fix**. The reviewed OIDC resolution supersedes the token claim and repairs the touchpoint.
+6. Confirm the audit passes and the old claim remains in lifecycle history.
+7. Press `Ctrl+C` in the terminal.
 
-The browser opens `http://127.0.0.1:8797` with the intentionally broken Paper Crane CLI fixture.
-
-1. Confirm **Strict audit blocked** and three errors.
-2. Read the compact context pack. The reviewed OIDC decision is active truth; the unsourced token claim is a critical warning.
-3. Select **Apply governed fix**.
-4. Confirm **Strict audit passing**.
-5. Read the context again. OIDC remains active truth and the token claim remains visible as superseded history.
-6. Return to the terminal and press `Ctrl+C`.
-
-This is the core product claim: an agent-written memory cannot silently become trusted context, and resolving a conflict does not erase the provenance trail.
-
-If port `8797` is occupied, choose another one:
-
-```console
-npm run judge:demo -- --port 8800
-```
+The first download is intentionally visible and can be hundreds of megabytes depending on platform. Later starts reuse the platform user-data cache and persistent database.
 
 ## Automated proof
-
-Run:
 
 ```console
 npm run judge:dry-run
 ```
 
-The disposable dry run verifies that:
-
-- the strict CLI audit exits nonzero with the three expected governance findings;
-- compact context separates reviewed truth from a critical warning;
-- the governed resolution makes the identical strict audit pass;
-- the local dashboard API reproduces the blocked-to-passing flow;
-- default project-draft MCP creates unreviewed candidates and attaches candidate evidence without changing review state; and
-- strict read-only MCP exposes context, audit, and lifecycle inspection without a write or self-approval path.
-
-It removes its temporary store when complete and prints `Judge dry run: PASS` only after every assertion succeeds.
+PASS means the script verified cross-project visibility only through touchpoints, broken-touchpoint retention, fail–resolve–pass behavior, agent project isolation, strict read-only tools, clean-restart persistence, and external Mongo mode. It uses disposable database data and does not alter normal MiniPMDB state.
 
 ## Full verification
 
-`npm ci --ignore-scripts` is optional for the demo because MiniPMDB has no runtime dependencies. It verifies the lockfile for a conventional clean build path.
-
 ```console
-npm ci --ignore-scripts
 npm run check
 npm test
 npm run smoke
 npm run judge:dry-run
+npm run sanitize
+npm audit --omit=dev
+npm audit signatures
 ```
 
-The same governance audit is available through the CLI, local dashboard, MCP server, and [`action.yml`](../action.yml) GitHub Action.
+Managed-runtime support is claimed only for operating systems passing the public validation matrix. An optional Podman/Docker external path is documented in the README; it is not required for judging.
 
-## Use a project of your own
-
-The prepared Paper Crane fixture is not the only evaluation path. Follow [Try MiniPMDB on your own project](try-your-project.md) to initialize a disposable store in another local repository, let Codex create a small queue of unreviewed candidates with the [copy-ready prompt](prompts/draft-memory-intake.md), and then attach evidence and approve or reject each candidate yourself.
-
-That path exercises the actual trust boundary: agent writes remain quarantined, human decisions control lifecycle state, rejected candidates stay out of context, and the strict audit still checks approved high-confidence claims for sources.
+For an unscripted evaluation, follow [Try MiniPMDB on your own project](try-your-project.md) and paste the [review-first intake prompt](prompts/draft-memory-intake.md) into Codex.

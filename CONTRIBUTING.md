@@ -6,7 +6,7 @@ Thank you for considering a contribution. MiniPMDB is intentionally small: chang
 
 1. Open or reference an issue that describes the user-facing problem.
 2. Work on a topic branch; do not push directly to `main`.
-3. Keep runtime dependencies at zero unless the issue proves a standard-library implementation is unsuitable.
+3. Keep dependencies limited to the official MongoDB driver and the managed-runtime helper unless an issue proves another package is essential.
 4. Use synthetic fixtures. Never submit real credentials, transcripts, customer data, private project vocabulary, or machine-specific paths.
 5. Keep agent-created memories unreviewed by default. A new integration must not let an agent approve its own claims.
 6. Run the complete validation suite.
@@ -16,6 +16,8 @@ npm ci --ignore-scripts
 npm run check
 npm test
 npm run smoke
+npm run judge:dry-run
+npm run sanitize
 ```
 
 Source files should stay below 1,000 lines. If a file approaches that limit, split it by responsibility before adding more behavior.

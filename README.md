@@ -1,138 +1,126 @@
 # MiniPMDB
 
-**CI for agent memory.** MiniPMDB is a small, local-first quality gate that stops unreviewed, unsourced, contradictory, or obsolete project memories from silently becoming coding-agent truth.
+**CI for cross-project agent memory.** MiniPMDB is a small, local-first trust gate that stops unreviewed, unsourced, contradictory, or obsolete memories from silently becoming coding-agent truth.
 
-Most memory tools optimize recall. MiniPMDB asks a different question: **should this memory be trusted, and can the repository prove why?**
+Most memory tools optimize recall. MiniPMDB asks whether a memory is allowed to be trusted, why, and what happens when two projects collide at a shared contract.
 
-It ships as a dependency-free Node.js CLI, a stdio MCP server for Codex and other compatible agents, a local audit dashboard, and a composable GitHub Action.
+## Judge demo
 
-## Judge demo: one command
-
-Requirements: Node.js 20 or newer. No database, account, API key, container, or package download is required.
+Requirements: Node.js 20.19 or newer and network access for the first managed MongoDB download.
 
 ```console
+npm ci --ignore-scripts
 npm run judge:demo
 ```
 
-The command loads a synthetic unsafe-memory example, starts the loopback dashboard, and opens it in your browser. Select **Apply governed fix** to see the strict audit move from blocked to passing without deleting the historical warning. On Windows, `judge-demo.cmd` provides the same path by double-click; macOS and Linux users can run `./judge-demo.sh`.
+The foreground process downloads a pinned, real MongoDB Community Server binary on first use, keeps its database under the platform user-data directory, binds both MongoDB and the dashboard to `127.0.0.1`, seeds two synthetic projects, and opens `http://127.0.0.1:8797`.
 
-For a non-interactive proof of the complete CLI, context, dashboard API, default project-draft MCP path, and strict read-only mode:
+The demo begins blocked: Paper Crane CLI proposes a long-lived release token while Release Relay accepts only OIDC. Their touchpoint makes both projects' memories visible together. Apply the governed fix to see the audit pass without deleting the superseded claim.
+
+For a non-interactive proof of managed persistence, external Mongo mode, cross-project context, MCP permissions, and audit behavior:
 
 ```console
 npm run judge:dry-run
 ```
 
-See the [judge guide](docs/judge-guide.md) for supported platforms, expected results, and a three-minute evaluation route.
+See the [judge guide](docs/judge-guide.md) for the three-minute route and [try it on your project](docs/try-your-project.md) for the full agent-to-human review flow.
 
-## See the failure manually in 60 seconds
+## Trust boundary
 
-```console
-npm run demo:reset
-node src/cli.js audit --strict
-```
+MongoDB is the only canonical store. The five collections are `projects`, `memories`, `sources`, `links`, and `touchpoints`. Snapshot v2 JSON is a derived, portable audit artifact—not another write backend.
 
-The strict audit fails because an agent-created, unsourced claim says the release needs a long-lived registry token while reviewed evidence says the project uses OIDC.
+MCP defaults to `project-draft`:
 
-```console
-npm run demo:fix
-node src/cli.js audit --strict
-node src/cli.js context --profile compact --task "prepare the release"
-```
+- `memory_context`, `memory_audit`, and `memory_list` read governed state;
+- `memory_remember` creates only `unreviewed` memories for the project resolved from the MCP working directory;
+- `source_attach` adds evidence only to that project's unreviewed candidates;
+- the agent cannot approve, reject, supersede, register projects, or edit shared touchpoints.
 
-The fix does not erase history. It adds a reviewed resolution, marks the old claim superseded, and keeps the conflict visible as a warning. The audit passes, and the compact context pack gives an agent clean active truth without silently hiding the historical risk.
+Set `MINIPMDB_MCP_MODE=read-only` to expose no write tools. `draft-write` remains a compatibility alias for `project-draft`. Human dashboard and CLI operations own trust decisions.
 
-Start the local dashboard:
+## Run against your own repository
+
+Start MiniPMDB in one terminal:
 
 ```console
 npm start
 ```
 
-Open `http://127.0.0.1:8797`. The dashboard's two demo buttons reproduce the same fail–fix–pass flow.
+Register a repository and inspect it from another terminal:
 
-## What the strict audit checks
+```console
+node src/cli.js project add --key your-project --name "Your Project" --repo /absolute/path/to/repository
+node src/cli.js context --project your-project --task "understand this project safely"
+```
 
-- Active records cannot still be marked unreviewed.
-- High-confidence active claims need source references.
-- Supersession links must resolve, and superseded records cannot remain active.
-- Conflicts need a reviewed resolution record.
-- Source and relationship references cannot be broken.
-- Archived or rejected records cannot leak into context.
-- Warning records cannot be presented as active truth.
-- Every profile must stay within budget.
-- Compact profiles cannot silently drop critical warnings.
-
-`minipmdb audit --strict` exits nonzero on errors or warnings, so the same policy runs locally, through MCP, and in CI.
-
-## Use it from Codex through MCP
-
-MiniPMDB defaults to `project-draft`: the connected agent can read governed context, propose unreviewed memories, and attach evidence to those candidates inside the configured project store. Add this to your Codex configuration, replacing the path with your checkout:
+Configure Codex with the registered repository as the MCP working directory:
 
 ```toml
 [mcp_servers.minipmdb]
 command = "node"
 args = ["/absolute/path/to/MiniPMDB/src/mcp.js"]
-cwd = "/absolute/path/to/your-project"
-env = { MINIPMDB_STORE = ".minipmdb/store.json" }
+cwd = "/absolute/path/to/repository"
+env = { MINIPMDB_API_URL = "http://127.0.0.1:8797", MINIPMDB_MCP_MODE = "project-draft" }
 ```
 
-Available read tools:
+Then paste the [review-first intake prompt](docs/prompts/draft-memory-intake.md) into a new Codex task. Review candidates in the dashboard or with:
 
-- `memory_context` returns a budgeted pack with reviewed truth and warnings in separate sections.
-- `memory_audit` runs the same governance checks as CI.
-- `memory_list` exposes the local lifecycle state for inspection.
+```console
+node src/cli.js list --project your-project --status unreviewed
+node src/cli.js review MEMORY_ID --status reviewed --reviewer judge
+node src/cli.js audit --project your-project --strict
+```
 
-Default project-draft mode also exposes:
+## Cross-project touchpoints
 
-- `memory_remember` creates a candidate with lifecycle status `unreviewed`.
-- `source_attach` adds evidence only to a `draft` or `unreviewed` candidate and does not promote it.
+A touchpoint names two or more registered projects and references memories owned by its participants. Context for Project A includes Project B memory only through such a valid touchpoint, with the source project and inclusion reason labeled. Missing references, wrong-project references, and broken touchpoints are audit findings that compact context cannot silently omit.
 
-**Project-draft names the MCP permission boundary, not the stored lifecycle state.** An agent cannot approve or reject its own claim; review stays an explicit CLI or maintainer action. Set `MINIPMDB_MCP_MODE=read-only` for a strict no-write connection. `draft-write` remains accepted as a compatibility alias for `project-draft`.
+Humans can create a touchpoint in the dashboard or CLI:
 
-To exercise that full workflow on a repository of your own, follow [Try MiniPMDB on your own project](docs/try-your-project.md) and paste the [copy-ready draft-memory intake prompt](docs/prompts/draft-memory-intake.md) into a new Codex task. The guide covers local store initialization, MCP configuration, unreviewed candidate creation, evidence attachment, human approval or rejection, and final audit/context verification.
+```console
+node src/cli.js touchpoint upsert --name "Shared auth contract" --projects project-a,project-b --memories MEMORY_A,MEMORY_B --kind api-contract
+```
 
-The MCP tool schemas include read-only, destructive, and open-world annotations that match their behavior. See the official [Codex MCP documentation](https://developers.openai.com/codex/mcp/) for configuration concepts.
+## MongoDB runtime choices
 
-## Put the audit in GitHub Actions
+Managed local MongoDB is the default. The dashboard's Storage runtime panel can test and save an external, loopback MongoDB endpoint; restart MiniPMDB after changing it. Environment variables take precedence:
 
-Commit only a deliberately reviewed, non-sensitive MiniPMDB store. Then add:
+- `MINIPMDB_MONGODB_URI`
+- `MINIPMDB_DB_NAME`
+- `MINIPMDB_HOME`
+- `MINIPMDB_API_URL`
+- `MINIPMDB_MCP_MODE`
+
+Credential-free local URIs may be saved. Credentialed URIs can be tested for the current process but are not persisted; provide them with `MINIPMDB_MONGODB_URI`. Status output masks credentials.
+
+An engine-neutral [compose.yaml](compose.yaml) runs the same MongoDB patch release with a loopback port, named volume, and health check:
+
+```console
+podman compose up -d
+# or, for public users
+docker compose up -d
+```
+
+Keep the Node application outside the container, select External MongoDB, and use `mongodb://127.0.0.1:27017`. Maintainer validation is Podman-first; Docker is documented only as a public-user compatibility path.
+
+## GitHub Action
+
+Export a deliberately reviewed, non-sensitive snapshot:
+
+```console
+node src/cli.js export --out governance/minipmdb.snapshot.json
+```
+
+Then audit the derived artifact without MongoDB or an install step:
 
 ```yaml
 - uses: OchsSoft/MiniPMDB@v0.1.0
   with:
-    store: governance/project-memory.json
+    snapshot: governance/minipmdb.snapshot.json
     strict: "true"
 ```
 
-The action has no install step and receives only read access from the workflow. Local stores under `.minipmdb/` are ignored by default to reduce accidental publication.
-
-## CLI
-
-```text
-minipmdb init --project <key> --name <name>
-minipmdb list [--status unreviewed|reviewed|rejected|...]
-minipmdb remember --title <title> --body <body> [--kind decision]
-minipmdb source attach <memory-id> --label <label> --ref <reference>
-minipmdb review <memory-id> [--status reviewed]
-minipmdb supersede <old-id> --with <replacement-id>
-minipmdb context --task <task> [--profile drift_guard|balanced|compact]
-minipmdb audit [--strict] [--json]
-```
-
-All commands accept `--store <path>`. The default is `.minipmdb/store.json`.
-
-## Design boundaries
-
-MiniPMDB intentionally does not:
-
-- capture conversations or IDE sessions automatically;
-- embed, vectorize, or send memory to a hosted service;
-- execute tasks, shell commands, deployments, or approval workflows;
-- claim that a stored note is true merely because an agent wrote it;
-- replace the full database-backed system from which the governance problem was learned.
-
-The JSON store is canonical in this mini edition. Writes use a same-directory temporary file and rename, and in-process updates are serialized. The HTTP dashboard binds only to `127.0.0.1`.
-
-See [Architecture](docs/architecture.md), [Hackathon disclosure](HACKATHON.md), and [Security](SECURITY.md).
+The Action never treats JSON as canonical and has read-only workflow permissions.
 
 ## Validate
 
@@ -142,12 +130,11 @@ npm run check
 npm test
 npm run smoke
 npm run judge:dry-run
+npm run sanitize
+npm audit --omit=dev
+npm audit signatures
 ```
 
-The project uses Node built-ins only. `npm ci` verifies the lockfile but downloads no runtime packages.
+MiniPMDB has no remote hosting, telemetry, vector search, transcript capture, or task execution. Only synthetic data is public. See [Architecture](docs/architecture.md), [Security](SECURITY.md), [third-party notices](THIRD_PARTY_NOTICES.md), and the [Build Week disclosure](HACKATHON.md).
 
-## Open source
-
-MiniPMDB is licensed under the [Mozilla Public License 2.0](LICENSE). Changes to MPL-covered source files remain open while the library can still be used inside larger works under different terms.
-
-This is the first public, intentionally bounded edition of a larger private project. Contributions are welcome when they preserve the small, auditable product boundary. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+MiniPMDB is MPL-2.0 licensed and intentionally small enough to be a first open-source tool without publishing the larger private system that inspired the problem.

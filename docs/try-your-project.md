@@ -1,87 +1,73 @@
 # Try MiniPMDB on your own project
 
-This path lets a judge or maintainer exercise the full review-first workflow against any local repository: an agent proposes unreviewed memories and attaches candidate evidence, a human inspects them, approves or rejects each candidate, and then verifies the resulting audit and context.
+This route exercises the complete trust boundary on a disposable or real local repository. MiniPMDB stores only the memories and evidence references you explicitly submit; never add secrets, raw private conversations, or credential files.
 
-The experiment is local. MiniPMDB writes one JSON store and makes no outbound network requests. Use a disposable checkout for the quickest evaluation, or exclude `.minipmdb/` from version control before using a real project. Never put secrets or private conversation content into the store.
+## 1. Start MiniPMDB
 
-## 1. Initialize a store in the target project
-
-Open a terminal in the project you want to evaluate. Replace the MiniPMDB path and project values:
+From the MiniPMDB checkout:
 
 ```console
-node /absolute/path/to/MiniPMDB/src/cli.js init --project your-project --name "Your Project" --store .minipmdb/store.json
+npm ci --ignore-scripts
+npm start
 ```
 
-For a real repository, add `.minipmdb/` to its `.git/info/exclude` for a local-only experiment, or to `.gitignore` if that policy should be shared. Do not commit the store until you have deliberately reviewed it for sensitive material.
+Managed MongoDB downloads on first use and persists under the platform user-data directory. Keep this foreground server running.
 
-## 2. Connect Codex in project-draft mode
+## 2. Register the repository
 
-Codex supports local stdio MCP servers in `config.toml`. Personal configuration lives in `~/.codex/config.toml`; a trusted repository can instead use `.codex/config.toml`. Avoid committing a project-local configuration containing machine-specific absolute paths.
+In another terminal:
+
+```console
+node /absolute/path/to/MiniPMDB/src/cli.js project add --key your-project --name "Your Project" --repo /absolute/path/to/your-project
+```
+
+Registration is a human operation. The repository path lets MCP resolve the project from its working directory; an agent cannot choose another project key.
+
+## 3. Connect Codex in project-draft mode
+
+Add the following to personal `~/.codex/config.toml` or a trusted project configuration. Avoid committing machine-specific absolute paths.
 
 ```toml
 [mcp_servers.minipmdb]
 command = "node"
 args = ["/absolute/path/to/MiniPMDB/src/mcp.js"]
 cwd = "/absolute/path/to/your-project"
-env = { MINIPMDB_STORE = ".minipmdb/store.json", MINIPMDB_MCP_MODE = "project-draft" }
+env = { MINIPMDB_API_URL = "http://127.0.0.1:8797", MINIPMDB_MCP_MODE = "project-draft" }
 ```
 
-On Windows, forward-slash paths such as `C:/tools/MiniPMDB/src/mcp.js` work well inside TOML. Save the configuration, restart the Codex client or extension, and open a new task in the target repository. Use `/mcp` where available to confirm that `minipmdb` is connected.
+Restart Codex and confirm the five MiniPMDB tools are available. `project-draft` permits local unreviewed candidates and candidate evidence only. Use `read-only` to expose only context, audit, and list.
 
-The server advertises its review-first constraints during MCP initialization. `project-draft` is the default MCP permission mode: it means the connected LLM may propose memories and attach evidence to draft or unreviewed candidates in this configured store. It is not the stored lifecycle state. New records are `unreviewed`; `memory_remember` and `source_attach` cannot promote, approve, or reject them. Set `MINIPMDB_MCP_MODE=read-only` for a strict no-write connection. The older name `draft-write` is accepted as a compatibility alias.
+## 4. Let Codex build a review queue
 
-Official Codex configuration details are in the [OpenAI MCP documentation](https://learn.chatgpt.com/docs/extend/mcp).
+Paste the [copy-ready intake prompt](prompts/draft-memory-intake.md) into a new task in the registered repository. It asks Codex to inspect durable repository evidence, propose three to seven candidates, attach evidence, verify they remain unreviewed, and stop at the human gate.
 
-## 3. Let the agent build a review queue
+## 5. Approve or reject as a human
 
-Paste the [draft-memory intake prompt](prompts/draft-memory-intake.md) into the new task. It asks the agent to inspect durable repository evidence, avoid secrets and transient notes, create only three to seven candidates, attach explicit source references, and return their IDs for review.
-
-The prompt ends at the human gate. Before review, candidates stay in the warning/history section of context and cannot become active truth.
-
-## 4. Inspect and decide as the human reviewer
-
-Run every command below from the target project, replacing the MiniPMDB path and memory ID.
-
-List the pending queue:
+Open `http://127.0.0.1:8797`, select the project, and use the review queue. Or use the CLI:
 
 ```console
-node /absolute/path/to/MiniPMDB/src/cli.js list --status unreviewed --store .minipmdb/store.json
+node /absolute/path/to/MiniPMDB/src/cli.js list --project your-project --status unreviewed
+node /absolute/path/to/MiniPMDB/src/cli.js review MEMORY_ID --status reviewed --reviewer judge --note "Verified against repository evidence."
+node /absolute/path/to/MiniPMDB/src/cli.js review OTHER_ID --status rejected --reviewer judge --note "Transient or unsupported."
 ```
 
-If the agent did not attach evidence, or you want to correct it, use the CLI before review:
+Rejected records remain auditable but do not enter generated context. If a claim is ambiguous, reject it and have the agent create a corrected candidate.
+
+## 6. Verify the result
 
 ```console
-node /absolute/path/to/MiniPMDB/src/cli.js source attach <memory-id> --type file --label "Runtime declaration" --ref "package.json#engines" --store .minipmdb/store.json
+node /absolute/path/to/MiniPMDB/src/cli.js audit --project your-project --strict
+node /absolute/path/to/MiniPMDB/src/cli.js context --project your-project --profile balanced --task "continue project work"
 ```
 
-Then approve it explicitly:
+Expected behavior: reviewed records enter active truth, rejected records are excluded, pending candidates remain warnings/history, and a high-confidence approved record without evidence fails strict audit.
+
+## 7. Optional cross-project proof
+
+Register a second disposable repository, create and review a memory in each, then use the dashboard's touchpoint form or:
 
 ```console
-node /absolute/path/to/MiniPMDB/src/cli.js review <memory-id> --status reviewed --reviewer judge --note "Verified against the repository source." --store .minipmdb/store.json
+node /absolute/path/to/MiniPMDB/src/cli.js touchpoint upsert --name "Shared contract" --projects your-project,second-project --memories FIRST_ID,SECOND_ID --kind api-contract
 ```
 
-Reject a candidate that is incorrect, speculative, duplicate, sensitive, or too transient:
-
-```console
-node /absolute/path/to/MiniPMDB/src/cli.js review <memory-id> --status rejected --reviewer judge --note "Transient rather than durable project truth." --store .minipmdb/store.json
-```
-
-Rejected records remain inspectable in the store and through `list --status rejected`, but they are excluded from generated agent context. If a candidate needs rewriting, reject it and ask the agent to draft a corrected replacement rather than silently approving an ambiguous claim.
-
-## 5. Verify the governed result
-
-```console
-node /absolute/path/to/MiniPMDB/src/cli.js audit --strict --store .minipmdb/store.json
-node /absolute/path/to/MiniPMDB/src/cli.js context --profile balanced --task "continue project work" --store .minipmdb/store.json
-node /absolute/path/to/MiniPMDB/src/cli.js list --status rejected --store .minipmdb/store.json
-```
-
-Expected behavior:
-
-- approved, reviewed records can enter active project truth;
-- rejected records never enter context;
-- pending agent candidates remain warnings rather than truth;
-- a high-confidence approved record without a source makes the strict audit fail; and
-- source references and lifecycle state remain visible for inspection.
-
-When the experiment is complete, change `MINIPMDB_MCP_MODE` to `read-only` and restart the client if you want strict no-write access. To remove a disposable evaluation, delete only the target project's `.minipmdb/` directory after confirming its exact path and that no reviewed data needs to be retained.
+Context for either project now includes the other project's referenced memory with a project label and inclusion reason. Remove the touchpoint and that cross-project memory disappears.

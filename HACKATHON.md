@@ -1,45 +1,40 @@
 # OpenAI Build Week disclosure
 
-MiniPMDB is planned for the **Developer Tools** category.
+MiniPMDB is submitted to **Developer Tools** as “CI for cross-project agent memory.”
 
 ## Preexisting foundation
 
-Before the submission period, a private database-backed project already explored durable project memory, provenance, lifecycle states, context profiles, and local MCP access. That private project is not this repository and is not submitted for judging.
+Before the submission period, a private database-backed project explored durable memory, provenance, lifecycle governance, context profiles, and local agent access. That private codebase, data, history, and integrations are not part of this repository or submission.
 
 ## New work for this entry
 
-This repository has new history and a deliberately smaller implementation written during the Build Week submission period. The judged work is:
+This repository has new public history and a deliberately bounded implementation created during the Build Week period. The judged work includes:
 
-- the audit-first product thesis: CI for agent-memory quality rather than generic persistent recall;
-- a strict, deterministic governance audit with machine-readable exit behavior;
-- checks for review state, evidence, conflicts, supersession, reference integrity, context leakage, warning retention, and context budgets;
-- a dependency-free, versioned JSON store with atomic writes;
-- a review-first stdio MCP surface with accurate safety annotations;
-- a composable GitHub Action;
-- the synthetic fail–fix–pass release demonstration;
-- the local inspection dashboard, tests, public documentation, and open-source packaging.
+- a MongoDB-backed five-collection model for multiple projects and shared touchpoints;
+- deterministic audits for review state, evidence, conflicts, supersession, reference integrity, rejected leakage, and context budgets;
+- project-scoped `project-draft` MCP permissions and strict read-only mode;
+- managed local MongoDB plus external, Podman, and Docker-compatible configuration;
+- a dependency-free snapshot v2 GitHub Action;
+- the synthetic cross-project fail–review–resolve demonstration;
+- the dashboard, CLI, tests, documentation, and public open-source packaging.
 
-No private project data, private integration vocabulary, credentials, transcripts, customer material, local machine paths, or Git history are included. The example project and every memory in it are synthetic.
+No private project data, credentials, transcripts, customer material, machine paths, private integration vocabulary, MongoDB binaries, or previous Git history are included. Every public project and memory is synthetic.
 
 ## Codex and GPT-5.6 build evidence
 
-Codex is the primary implementation environment for this extraction. The primary session covers product positioning, sanitization boundaries, implementation, tests, documentation, demo design, and repository preparation. GPT-5.6 is used in that primary Codex build thread.
-
-Before submission, add the `/feedback` Session ID here and to the Devpost form:
+Codex with GPT-5.6 is the primary implementation environment for product positioning, sanitization, architecture, implementation, validation, documentation, and demo preparation.
 
 ```text
 Primary Codex /feedback Session ID: TBD before submission
 ```
 
-The final public commit range and release tag will provide the corresponding source evidence. Claims in this file should be updated only with verifiable build evidence.
+The user supplies that session ID, narration, public YouTube upload, and final Devpost form. The public commits and release tag provide source evidence.
 
 ## Judge path
 
-1. Run `npm run judge:demo` or use the platform launcher documented in [`docs/judge-guide.md`](docs/judge-guide.md).
-2. In the dashboard, observe the blocked strict audit and the unsafe claim separated into warnings.
-3. Select **Apply governed fix** and observe the passing audit, reviewed OIDC truth, and retained historical warning.
-4. Optionally run `npm run judge:dry-run` for an automated proof across CLI, context, HTTP API, project-draft candidate/evidence intake, and strict read-only MCP.
-5. Run `npm test` to inspect the focused unit and integration suite.
-6. For a flexible evaluation beyond the prepared fixture, follow [`docs/try-your-project.md`](docs/try-your-project.md) to let an agent create unreviewed candidates from another local repository and then approve or reject them at the human gate.
-
-The full flow requires no account, secret, model API call, container, or external database.
+1. Run `npm ci --ignore-scripts` and `npm run judge:demo`.
+2. Observe the broken cross-project release-auth touchpoint and strict audit failure.
+3. Inspect Project A context and see Project B's labeled memory through that touchpoint.
+4. Apply the governed fix and confirm strict audit passes while superseded history remains.
+5. Optionally run `npm run judge:dry-run` for the managed, external, persistence, MCP, and audit proof.
+6. Follow [the bring-your-own-project guide](docs/try-your-project.md) to let Codex propose real repository-grounded candidates for human approval or rejection.

@@ -6,86 +6,86 @@ const scenes = {
     number: "01 / 11",
     label: "OPENAI BUILD WEEK · DEVELOPER TOOLS",
     body: `
-      <h1>CI for <span class="accent">agent memory.</span></h1>
-      <p class="lede">MiniPMDB stops unreviewed, unsourced, contradictory, or obsolete memories from silently becoming project truth.</p>
-      <div class="pill-row"><span class="pill">Local-first</span><span class="pill">MCP</span><span class="pill">Strict audit</span><span class="pill">GitHub Action</span></div>
+      <h1>CI for <span class="accent">cross-project agent memory.</span></h1>
+      <p class="lede">MiniPMDB makes agents prove what should be trusted—especially where projects share a contract.</p>
+      <div class="pill-row"><span class="pill">Local-first MongoDB</span><span class="pill">MCP</span><span class="pill">Strict audit</span><span class="pill">GitHub Action</span></div>
     `
   },
   problem: {
     number: "02 / 11",
-    label: "THE FAILURE MODE",
+    label: "THE CROSS-PROJECT FAILURE MODE",
     body: `
-      <h2>Remembered does not mean trusted.</h2>
+      <h2>Two projects. One contract. Conflicting memory.</h2>
       <div class="split">
-        <section class="panel danger"><div class="panel-label">Agent note · unreviewed</div><h3>“Release requires a long-lived registry token.”</h3><p>High confidence. No source. Still marked active.</p></section>
-        <section class="panel safe"><div class="panel-label">Reviewed evidence</div><h3>“Release uses trusted publishing with OIDC.”</h3><p>Source-backed workflow. The claims cannot both be active truth.</p></section>
+        <section class="panel danger"><div class="panel-label">Paper Crane CLI · agent candidate</div><h3>“Release requires a long-lived registry token.”</h3><p>Unreviewed. High confidence. No evidence. Never active truth.</p></section>
+        <section class="panel safe"><div class="panel-label">Release Relay · reviewed contract</div><h3>“Publishing accepts short-lived OIDC only.”</h3><p>The shared touchpoint makes this collision visible to both projects.</p></section>
       </div>
     `
   },
   "audit-fail": {
     number: "03 / 11",
-    label: "FAIL CLOSED",
+    label: "FAIL CLOSED · REAL SNAPSHOT AUDIT",
     body: `
-      <div class="terminal"><div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span><span>real CLI output · synthetic project</span></div><pre>$ npm run demo:reset
-Loaded the intentionally broken release-memory demo.
-
-$ node src/cli.js audit --strict
+      <div class="terminal"><div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span><span>snapshot v2 · synthetic projects</span></div><pre>$ node src/cli.js audit-snapshot --strict --snapshot examples/release-guard/initial.json
 <span class="error-line">MiniPMDB audit: FAIL
-Errors: 3; warnings: 0; strict: yes
-ERROR active_unreviewed
-ERROR high_confidence_without_source
-ERROR unresolved_conflict</span>
+Projects 2 | Memories 3 | Touchpoints 1 | Errors 1 | Warnings 3
+- WARNING unreviewed_candidate
+- WARNING candidate_without_source
+- ERROR unresolved_conflict
+- WARNING broken_touchpoint</span>
 
 Process exited with code 1</pre></div>
     `
   },
   "governed-fix": {
     number: "06 / 11",
-    label: "FIX THE MEMORY · KEEP THE HISTORY",
+    label: "FIX THE CONTRACT · KEEP THE HISTORY",
     body: `
-      <div class="terminal"><div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span><span>reviewed resolution + explicit supersession</span></div><pre>$ npm run demo:fix
-Applied a reviewed resolution and supersession.
+      <div class="terminal"><div class="terminal-bar"><span class="terminal-dot"></span><span class="terminal-dot"></span><span class="terminal-dot"></span><span>human-reviewed resolution + explicit supersession</span></div><pre>$ node src/cli.js demo fix
+Applied a reviewed resolution and repaired the shared touchpoint.
 
 $ node src/cli.js audit --strict
 <span class="pass-line">MiniPMDB audit: PASS
-Errors: 0; warnings: 0; strict: yes
-No governance violations found.</span></pre></div>
-      <div class="pill-row"><span class="pill">old claim → superseded</span><span class="pill">OIDC → reviewed truth</span><span class="pill">conflict → resolved</span></div>
+Projects 2 | Memories 4 | Touchpoints 1 | Errors 0 | Warnings 0</span></pre></div>
+      <div class="pill-row"><span class="pill">token claim → superseded</span><span class="pill">OIDC → reviewed truth</span><span class="pill">touchpoint → active</span></div>
     `
   },
   mcp: {
     number: "08 / 11",
-    label: "CODEX GETS GOVERNED CONTEXT",
+    label: "CODEX GETS PROJECT-SCOPED MEMORY",
     body: `
       <div class="code-grid">
         <div class="terminal"><div class="terminal-bar">Codex MCP configuration</div><pre>[mcp_servers.minipmdb]
 command = "node"
 args = ["/path/to/MiniPMDB/src/mcp.js"]
-cwd = "/path/to/your-project"
-env = { MINIPMDB_STORE =
-  ".minipmdb/store.json",
+cwd = "/path/to/registered-project"
+env = {
+  MINIPMDB_API_URL =
+    "http://127.0.0.1:8797",
   MINIPMDB_MCP_MODE =
-  "project-draft" }</pre></div>
+    "project-draft"
+}</pre></div>
         <div class="checklist">
-          <div class="check"><span>✓</span><span><strong>Project-draft by default</strong><br>Unreviewed candidates plus evidence.</span></div>
-          <div class="check"><span>✓</span><span><strong>Human review stays final</strong><br>Strict read-only is also available.</span></div>
-          <div class="check"><span>✓</span><span><strong>Compact without silent risk</strong><br>Critical warnings survive token budgets.</span></div>
+          <div class="check"><span>✓</span><span><strong>Project resolved from cwd</strong><br>No caller-selected project escape hatch.</span></div>
+          <div class="check"><span>✓</span><span><strong>Unreviewed candidates only</strong><br>Agents can attach local evidence, not approve truth.</span></div>
+          <div class="check"><span>✓</span><span><strong>Strict read-only</strong><br>Removes every write tool.</span></div>
         </div>
       </div>
     `
   },
   ci: {
     number: "09 / 11",
-    label: "ONE POLICY · EVERY SURFACE",
+    label: "MONGO CANONICAL · JSON AUDIT ARTIFACT",
     body: `
       <div class="code-grid">
         <div class="terminal"><div class="terminal-bar">.github/workflows/memory.yml</div><pre>- uses: OchsSoft/MiniPMDB@v0.1.0
   with:
-    store: governance/project-memory.json
+    snapshot:
+      governance/minipmdb.snapshot.json
     strict: "true"</pre></div>
         <div>
-          <h2>CLI. MCP. Dashboard. CI.</h2>
-          <div class="metric-row"><div class="metric"><strong>0</strong><span>runtime dependencies</span></div><div class="metric"><strong>11</strong><span>passing tests</span></div><div class="metric"><strong>1</strong><span>deterministic policy</span></div></div>
+          <h2>One policy. Every surface.</h2>
+          <div class="metric-row"><div class="metric"><strong>5</strong><span>Mongo collections</span></div><div class="metric"><strong>12</strong><span>focused tests</span></div><div class="metric"><strong>0</strong><span>Mongo needed in the Action</span></div></div>
         </div>
       </div>
     `
@@ -96,8 +96,8 @@ env = { MINIPMDB_STORE =
     body: `
       <h2>Codex + GPT-5.6 built the public extraction.</h2>
       <div class="split">
-        <section class="panel"><div class="panel-label">Primary build thread</div><h3>Product thesis → implementation → validation</h3><ul><li>Audit-first competitive positioning</li><li>Sanitized architecture and MCP contracts</li><li>Tests, public docs, CI, and this demo</li></ul></section>
-        <section class="panel"><div class="panel-label">Public boundary</div><h3>Small on purpose.</h3><ul><li>New Git history</li><li>Synthetic data only</li><li>No private integrations or payloads</li><li>MPL-2.0 open source</li></ul></section>
+        <section class="panel"><div class="panel-label">Primary build thread</div><h3>Thesis → Mongo pivot → validation</h3><ul><li>Cross-project touchpoints and trust boundaries</li><li>Managed and external runtime paths</li><li>Tests, public docs, CI, and this demo</li></ul></section>
+        <section class="panel"><div class="panel-label">Public boundary</div><h3>Small on purpose.</h3><ul><li>New Git history</li><li>Synthetic projects only</li><li>No private code or payloads</li><li>MPL-2.0 open source</li></ul></section>
       </div>
     `
   },
@@ -105,7 +105,7 @@ env = { MINIPMDB_STORE =
     number: "11 / 11",
     label: "MINIPMDB",
     body: `
-      <div class="quote">Other tools help agents remember.<br><span class="accent">MiniPMDB helps teams decide what agents are allowed to trust.</span></div>
+      <div class="quote">Other tools help agents remember.<br><span class="accent">MiniPMDB helps teams decide what agents are allowed to trust—across projects.</span></div>
       <div class="repo">github.com/OchsSoft/MiniPMDB</div>
     `
   }

@@ -1,158 +1,147 @@
-import {
-  ACTIVE_STATUSES,
-  EXCLUDED_STATUSES,
-  WARNING_STATUSES,
-  resolveProfile
-} from "./constants.js";
-import { normalizeStore } from "./schema.js";
+import { ACTIVE_STATUSES, EXCLUDED_STATUSES, WARNING_STATUSES, resolveProfile } from "./constants.js";
+import { normalizeSnapshot } from "./schema.js";
 
-const STATUS_SCORE = {
-  reviewed: 40,
-  current: 34,
-  open: 30,
-  resolved: 18,
-  unreviewed: 4,
-  draft: 2,
-  stale: -8,
-  superseded: -14
-};
-
-export function buildContextPack(storeValue, { task = "", profile = "balanced", maxChars } = {}) {
-  const store = normalizeStore(storeValue);
+export function buildContextPack(snapshotValue, { projectKey, task = "", profile = "balanced", maxChars } = {}) {
+  const snapshot = normalizeSnapshot(snapshotValue);
+  const project = snapshot.projects.find((item) => item.key === projectKey);
+  if (!project) throw new Error(`Project not found: ${projectKey}.`);
   const policy = resolveProfile(profile);
-  if (maxChars !== undefined) {
-    const parsed = Number(maxChars);
-    if (!Number.isInteger(parsed) || parsed < 500) {
-      throw new Error("maxChars must be an integer of at least 500.");
-    }
-    policy.max_chars = parsed;
-  }
-
+  if (maxChars) policy.max_chars = Math.max(500, Number(maxChars));
   const terms = tokenize(task);
-  const sourceById = new Map(store.sources.map((source) => [source.id, source]));
-  const ranked = store.memories
-    .filter((memory) => !EXCLUDED_STATUSES.has(memory.status))
-    .map((memory) => ({ ...memory, score: scoreMemory(memory, terms) }))
-    .sort(compareMemories);
-  const active = ranked.filter(isGovernedActive);
-  const warnings = ranked.filter((memory) => isWarning(memory) || isReviewMismatch(memory));
-  const criticalWarnings = warnings.filter((memory) => isCriticalWarning(memory, store.links));
-  const otherWarnings = warnings.filter((memory) => !criticalWarnings.some((item) => item.id === memory.id));
+  const links = snapshot.links;
+  const own = snapshot.memories.filter((item) => item.project_key === projectKey && !EXCLUDED_STATUSES.has(item.status));
+  const touchpoints = snapshot.touchpoints
+    .filter((item) => item.projects.includes(projectKey) && item.status !== "archived")
+    .map((item) => ({ ...item, score: scoreTouchpoint(item, terms) }))
+    .sort(compareScore);
+  const linkedIds = new Set(touchpoints.flatMap((item) => item.memory_ids));
+  const cross = snapshot.memories.filter((item) => item.project_key !== projectKey && linkedIds.has(item.id) && !EXCLUDED_STATUSES.has(item.status));
+  const rankedOwn = own.map((item) => ({ ...item, score: scoreMemory(item, terms, links) })).sort(compareScore);
+  const rankedCross = cross.map((item) => ({ ...item, score: scoreMemory(item, terms, links) + 18 })).sort(compareScore);
+  const criticalWarnings = rankedOwn.filter((item) => isCriticalWarning(item, links));
+  const active = rankedOwn.filter(isGovernedActive);
+  const warnings = rankedOwn.filter(isWarningMemory);
+  const selectedWarnings = uniqueById([...criticalWarnings, ...warnings]).slice(0, Math.max(policy.warning_limit, criticalWarnings.length));
+  const selectedActive = active.slice(0, 12);
+  const selectedTouchpoints = takeRequiredFirst(touchpoints, policy.touchpoint_limit, (item) => item.status === "broken");
+  const selectedCross = takeRequiredFirst(rankedCross, policy.cross_project_limit, (item) => isCriticalWarning(item, links));
 
-  const header = [
-    "# MiniPMDB Context",
-    `Project: ${store.project.name} (${store.project.key})`,
-    `Task: ${task || "(not specified)"}`,
-    `Profile: ${policy.name} — ${policy.description}`,
-    ""
-  ].join("\n");
-  const selected = [];
-  let used = header.length;
+  const sections = [
+    ["Active project truth", selectedActive.map((item) => formatMemory(item, snapshot.sources, policy.body_chars, "ACTIVE"))],
+    ["Cross-project touchpoint context", selectedCross.map((item) => formatMemory(item, snapshot.sources, policy.body_chars, `PROJECT ${item.project_key}${isWarningMemory(item) ? " WARNING" : ""}`))],
+    ["Warnings and history", selectedWarnings.map((item) => formatMemory(item, snapshot.sources, policy.body_chars, "WARNING"))],
+    ["Project touchpoints", selectedTouchpoints.map((item) => formatTouchpoint(item, snapshot.memories, policy.body_chars))]
+  ];
+  const header = `# MiniPMDB Context\nProject: ${project.name} (${project.key})\nTask: ${task || "general project work"}\nProfile: ${policy.name}`;
+  let pack = render(header, sections);
+  while (pack.length > policy.max_chars && trimOptional(sections, selectedWarnings, criticalWarnings, selectedTouchpoints)) pack = render(header, sections);
+  if (pack.length > policy.max_chars) pack = pack.slice(0, policy.max_chars - 16) + "\n[TRUNCATED]\n";
 
-  for (const memory of [...criticalWarnings, ...active, ...otherWarnings.slice(0, policy.warning_limit)]) {
-    if (selected.some((item) => item.id === memory.id)) {
-      continue;
-    }
-    const line = formatMemory(memory, sourceById, policy.body_chars, isGovernedActive(memory) ? "ACTIVE" : "WARNING");
-    if (used + line.length + 1 <= policy.max_chars) {
-      selected.push({ memory, line });
-      used += line.length + 1;
-    }
-  }
-
-  const selectedIds = new Set(selected.map((item) => item.memory.id));
-  const selectedActive = active.filter((memory) => selectedIds.has(memory.id));
-  const selectedWarnings = warnings.filter((memory) => selectedIds.has(memory.id));
-  const pack = formatPack(header, selected, selectedActive, selectedWarnings);
-  const omittedCritical = criticalWarnings.filter((memory) => !selectedIds.has(memory.id)).map((memory) => memory.id);
-
+  const selectedWarningIds = new Set(selectedWarnings.map((item) => item.id));
+  const selectedTouchpointIds = new Set(selectedTouchpoints.map((item) => item.id));
   return {
-    project: store.project,
+    project,
     task,
     profile: policy.name,
     active: selectedActive,
+    cross_project_memories: selectedCross,
     warnings: selectedWarnings,
+    touchpoints: selectedTouchpoints,
     context_pack: pack,
     context_selection: {
       profile: policy.name,
-      candidate_count: store.memories.length,
-      selected_count: selected.length,
-      active_count: selectedActive.length,
-      warning_count: selectedWarnings.length,
       max_chars: policy.max_chars,
       actual_chars: pack.length,
-      dropped_count: ranked.length - selected.length,
-      omitted_critical_warning_ids: omittedCritical
+      active_count: selectedActive.length,
+      cross_project_count: selectedCross.length,
+      warning_count: selectedWarnings.length,
+      touchpoint_count: selectedTouchpoints.length,
+      omitted_critical_warning_ids: criticalWarnings.filter((item) => !selectedWarningIds.has(item.id)).map((item) => item.id),
+      omitted_broken_touchpoint_ids: touchpoints.filter((item) => item.status === "broken" && !selectedTouchpointIds.has(item.id)).map((item) => item.id)
     }
   };
 }
 
-export function isGovernedActive(memory) {
-  return ACTIVE_STATUSES.has(memory.status) && !isReviewMismatch(memory);
-}
-
-export function isReviewMismatch(memory) {
-  return String(memory.metadata?.review_state || "").toLowerCase() === "unreviewed";
-}
-
-function isWarning(memory) {
-  return WARNING_STATUSES.has(memory.status);
-}
-
-function isCriticalWarning(memory, links) {
-  if (memory.critical) {
+function trimOptional(sections, selectedWarnings, criticalWarnings, selectedTouchpoints) {
+  const criticalIds = new Set(criticalWarnings.map((item) => item.id));
+  if (sections[0][1].length > 1) return Boolean(sections[0][1].pop());
+  if (sections[1][1].length > 1) return Boolean(sections[1][1].pop());
+  const removableWarning = selectedWarnings.findLastIndex((item) => !criticalIds.has(item.id));
+  if (removableWarning >= 0) {
+    selectedWarnings.splice(removableWarning, 1);
+    sections[2][1].splice(removableWarning, 1);
     return true;
   }
-  return links.some(
-    (link) =>
-      [link.from, link.to].includes(memory.id) &&
-      ["conflicts_with", "supersedes"].includes(link.relationship)
-  );
+  const removableTouchpoint = selectedTouchpoints.findLastIndex((item) => item.status !== "broken");
+  if (removableTouchpoint >= 0) {
+    selectedTouchpoints.splice(removableTouchpoint, 1);
+    sections[3][1].splice(removableTouchpoint, 1);
+    return true;
+  }
+  return false;
 }
 
-function scoreMemory(memory, terms) {
-  let score = STATUS_SCORE[memory.status] || 0;
-  if (memory.kind === "constraint") score += 22;
-  if (memory.kind === "decision") score += 16;
-  if (["risk", "todo"].includes(memory.kind)) score += 12;
-  if (memory.confidence === "high") score += 8;
-  if (memory.source_ids.length) score += 8;
-  const haystack = `${memory.title} ${memory.body} ${memory.tags.join(" ")}`.toLowerCase();
-  score += terms.filter((term) => haystack.includes(term)).length * 12;
-  return score;
-}
-
-function compareMemories(left, right) {
-  return right.score - left.score || right.updated_at.localeCompare(left.updated_at) || left.id.localeCompare(right.id);
-}
-
-function formatMemory(memory, sourceById, bodyChars, label) {
-  const body = truncate(memory.body, bodyChars);
-  const refs = memory.source_ids
-    .map((id) => sourceById.get(id))
-    .filter(Boolean)
-    .map((source) => source.ref);
-  const evidence = refs.length ? ` sources=${refs.join(", ")}` : " sources=none";
-  return `- [${label}] ${memory.id} | ${memory.kind}/${memory.status}/${memory.confidence} | ${memory.title}: ${body} |${evidence}`;
-}
-
-function formatPack(header, selected, selectedActive, selectedWarnings) {
-  const lines = [header.trimEnd(), "", "## Active project truth"];
-  const activeIds = new Set(selectedActive.map((memory) => memory.id));
-  const warningIds = new Set(selectedWarnings.map((memory) => memory.id));
-  const activeLines = selected.filter((item) => activeIds.has(item.memory.id)).map((item) => item.line);
-  lines.push(...(activeLines.length ? activeLines : ["- None selected."]));
-  lines.push("", "## Warnings and history");
-  const warningLines = selected.filter((item) => warningIds.has(item.memory.id)).map((item) => item.line);
-  lines.push(...(warningLines.length ? warningLines : ["- None selected."]));
+function render(header, sections) {
+  const lines = [header];
+  for (const [title, values] of sections) lines.push("", `## ${title}`, ...(values.length ? values : ["- None selected."]));
   return lines.join("\n");
 }
 
-function truncate(value, max) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
-  return text.length <= max ? text : `${text.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+function formatMemory(memory, sources, bodyChars, label) {
+  const refs = memory.source_ids.map((id) => sources.find((item) => item.id === id)?.ref).filter(Boolean);
+  const evidence = refs.length ? ` | sources=${refs.join(", ")}` : " | sources=none";
+  return `- [${label}] ${memory.id} | ${memory.kind}/${memory.status}/${memory.confidence} | ${memory.title}: ${truncate(memory.body, bodyChars)}${evidence}`;
+}
+
+function formatTouchpoint(touchpoint, memories, bodyChars) {
+  const refs = touchpoint.memory_ids.map((id) => {
+    const memory = memories.find((item) => item.id === id);
+    return memory ? `${memory.project_key}:${memory.id}:${memory.status}` : id;
+  });
+  return `- [TOUCHPOINT ${touchpoint.status.toUpperCase()}] ${touchpoint.id} | ${touchpoint.projects.join(" <-> ")} | ${touchpoint.name}: ${truncate(touchpoint.summary, bodyChars)} | memories=${refs.join(", ")}`;
+}
+
+function scoreMemory(memory, terms, links) {
+  const status = { reviewed: 44, current: 42, open: 35, resolved: 32, unreviewed: 24, draft: 20, superseded: 14, stale: 12 }[memory.status] || 0;
+  const text = `${memory.title} ${memory.body} ${memory.tags.join(" ")}`.toLowerCase();
+  return status + terms.filter((term) => text.includes(term)).length * 12 + (memory.critical ? 35 : 0) + (isCriticalWarning(memory, links) ? 25 : 0);
+}
+
+function scoreTouchpoint(item, terms) {
+  const text = `${item.name} ${item.summary} ${item.projects.join(" ")} ${item.tags.join(" ")}`.toLowerCase();
+  return ({ broken: 60, active: 40, planned: 20, stale: 18 }[item.status] || 0) + terms.filter((term) => text.includes(term)).length * 12;
+}
+
+function isCriticalWarning(memory, links) {
+  if (!isWarningMemory(memory)) return false;
+  return memory.critical || links.some((link) => link.relationship === "conflicts_with" && link.status === "open" && [link.from, link.to].includes(memory.id));
+}
+
+function isWarningMemory(memory) {
+  return WARNING_STATUSES.has(memory.status) || memory.metadata?.review_state === "unreviewed";
+}
+
+function isGovernedActive(memory) {
+  return ACTIVE_STATUSES.has(memory.status) && memory.metadata?.review_state !== "unreviewed" && memory.metadata?.review_state !== "rejected";
+}
+
+function takeRequiredFirst(items, limit, required) {
+  return uniqueById([...items.filter(required), ...items]).slice(0, Math.max(limit, items.filter(required).length));
+}
+
+function uniqueById(items) {
+  return [...new Map(items.map((item) => [item.id, item])).values()];
 }
 
 function tokenize(value) {
-  return [...new Set(String(value || "").toLowerCase().split(/[^a-z0-9_-]+/).filter((term) => term.length > 2))];
+  return [...new Set(String(value).toLowerCase().match(/[a-z0-9][a-z0-9_-]{2,}/g) || [])];
+}
+
+function compareScore(left, right) {
+  return right.score - left.score || right.updated_at.localeCompare(left.updated_at) || left.id.localeCompare(right.id);
+}
+
+function truncate(value, limit) {
+  const text = String(value || "");
+  return text.length <= limit ? text : `${text.slice(0, Math.max(0, limit - 1)).trimEnd()}…`;
 }

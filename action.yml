@@ -5,8 +5,8 @@ branding:
   icon: shield
   color: purple
 inputs:
-  store:
-    description: Path to the MiniPMDB JSON store in the checked-out repository.
+  snapshot:
+    description: Path to a reviewed MiniPMDB snapshot v2 exported from MongoDB.
     required: true
   strict:
     description: Fail on warnings in addition to errors.
@@ -18,7 +18,7 @@ runs:
     - name: Audit governed memory
       shell: bash
       run: |
-        args=(audit --store "${{ inputs.store }}")
+        args=(audit-snapshot --snapshot "${{ inputs.snapshot }}")
         if [ "${{ inputs.strict }}" = "true" ]; then
           args+=(--strict)
         fi

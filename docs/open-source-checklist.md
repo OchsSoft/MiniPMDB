@@ -15,9 +15,9 @@
 - [ ] Replace the pending `/feedback` Session ID in `HACKATHON.md`.
 - [ ] Confirm the public commit range contains only work eligible for judging.
 - [ ] Tag `v0.1.0` only after CI passes from the public repository.
-- [ ] Test the README judge path in a fresh directory.
+- [ ] Test the README judge path in a fresh public clone with an empty MiniPMDB runtime and binary cache.
 - [ ] Verify the composite action against a separate synthetic repository.
-- [ ] Publish release notes with known limitations and the JSON schema version.
+- [ ] Publish release notes with known limitations, MongoDB 8.2.6, and snapshot schema v2.
 
 ## Submission
 

@@ -1,142 +1,108 @@
 #!/usr/bin/env node
 import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { formatAuditReport } from "./audit.js";
-import { MEMORY_STATUSES, assertEnum } from "./constants.js";
-import { MiniPMDBService, applyReleaseDemoFix } from "./service.js";
-import { DEFAULT_STORE_PATH } from "./store.js";
-
-const args = parseArgs(process.argv.slice(2));
+import { auditSnapshot, formatAuditReport } from "./audit.js";
+import { MiniPMDBClient } from "./api-client.js";
+import { normalizeSnapshot } from "./schema.js";
 
 try {
-  await run(args);
+  const input = parse(process.argv.slice(2));
+  const client = new MiniPMDBClient(input.flags.api || process.env.MINIPMDB_API_URL);
+  const value = await run(input, client);
+  if (value !== undefined) print(value, input.flags.json);
 } catch (error) {
   process.stderr.write(`MiniPMDB: ${error.message}\n`);
-  process.exitCode = 1;
+  process.exitCode = error.exitCode || 1;
 }
 
-async function run(input) {
-  const command = input.positionals[0] || "help";
-  const storePath = input.flags.store || process.env.MINIPMDB_STORE || DEFAULT_STORE_PATH;
-  const service = new MiniPMDBService({ storePath });
-
+async function run(input, client) {
+  const [command, subcommand] = input.positionals;
   switch (command) {
-    case "init": {
-      const store = await service.init({
-        projectKey: input.flags.project || "my-project",
-        projectName: input.flags.name || "My project"
-      });
-      printJsonOrText(input, store, `Initialized MiniPMDB for ${store.project.name} at ${path.resolve(storePath)}.`);
-      return;
-    }
-    case "list": {
-      const store = await service.read();
-      const status = input.flags.status
-        ? assertEnum(input.flags.status, MEMORY_STATUSES, "status")
-        : "";
-      const memories = status
-        ? store.memories.filter((memory) => memory.status === status)
-        : store.memories;
-      printJsonOrText(input, { memories }, formatMemoryList(memories, status));
-      return;
-    }
-    case "audit": {
-      const report = await service.audit({ strict: Boolean(input.flags.strict) });
-      printJsonOrText(input, report, formatAuditReport(report));
-      if (!report.passed) process.exitCode = 1;
-      return;
-    }
-    case "context": {
-      const context = await service.context({
-        task: input.flags.task || "",
-        profile: input.flags.profile || "balanced",
-        maxChars: input.flags["max-chars"]
-      });
-      printJsonOrText(input, context, context.context_pack);
-      return;
-    }
-    case "remember": {
-      requireFlags(input.flags, ["title", "body"]);
-      const store = await service.remember({
-        kind: input.flags.kind || "note",
-        status: input.flags.status || "unreviewed",
-        confidence: input.flags.confidence || "unknown",
+    case "project":
+      if (subcommand !== "add") throw new Error("Use: minipmdb project add --key KEY --name NAME --repo PATH");
+      requireFlags(input, ["key", "name", "repo"]);
+      return client.post("/api/projects", { key: input.flags.key, name: input.flags.name, repo_path: input.flags.repo, tags: list(input.flags.tags) });
+    case "list":
+      return client.get("/api/memories", { project_key: input.flags.project, status: input.flags.status });
+    case "remember":
+      requireFlags(input, ["project", "title", "body"]);
+      return client.post("/api/memories", {
+        project_key: input.flags.project,
         title: input.flags.title,
         body: input.flags.body,
-        tags: commaList(input.flags.tags),
-        source_ids: commaList(input.flags.sources),
-        critical: Boolean(input.flags.critical)
-      }, { reviewFirst: false });
-      printJsonOrText(input, store, `Recorded ${store.memories.at(-1).id} as ${store.memories.at(-1).status}.`);
-      return;
+        kind: input.flags.kind || "note",
+        confidence: input.flags.confidence || "unknown",
+        tags: list(input.flags.tags),
+        critical: Boolean(input.flags.critical),
+        review_first: true
+      });
+    case "source": {
+      if (subcommand !== "attach") throw new Error("Use: minipmdb source attach MEMORY_ID --label LABEL --ref REF");
+      const memoryId = input.positionals[2];
+      if (!memoryId) throw new Error("Memory ID is required.");
+      requireFlags(input, ["label", "ref"]);
+      return client.post(`/api/memories/${encodeURIComponent(memoryId)}/sources`, { type: input.flags.type || "doc", label: input.flags.label, ref: input.flags.ref });
     }
     case "review": {
-      const id = requiredPosition(input, 1, "review requires a memory id");
-      const store = await service.review(id, {
-        status: input.flags.status || "reviewed",
-        reviewer: input.flags.reviewer || "human",
-        note: input.flags.note || ""
-      });
-      printJsonOrText(input, store, `Reviewed ${id}.`);
-      return;
-    }
-    case "source": {
-      if (input.positionals[1] !== "attach") throw new Error("Use: minipmdb source attach <memory-id> --label ... --ref ...");
-      const id = requiredPosition(input, 2, "source attach requires a memory id");
-      requireFlags(input.flags, ["label", "ref"]);
-      const store = await service.attachSource(id, {
-        type: input.flags.type || "doc",
-        label: input.flags.label,
-        ref: input.flags.ref
-      });
-      printJsonOrText(input, store, `Attached source to ${id}.`);
-      return;
+      const memoryId = subcommand;
+      if (!memoryId) throw new Error("Memory ID is required.");
+      return client.post(`/api/memories/${encodeURIComponent(memoryId)}/review`, { status: input.flags.status || "reviewed", reviewer: input.flags.reviewer || "human", note: input.flags.note || "" });
     }
     case "supersede": {
-      const oldId = requiredPosition(input, 1, "supersede requires the historical memory id");
-      if (!input.flags.with) throw new Error("supersede requires --with <replacement-id>.");
-      const store = await service.supersede(oldId, input.flags.with, { reason: input.flags.reason || "" });
-      printJsonOrText(input, store, `Marked ${oldId} superseded by ${input.flags.with}.`);
-      return;
+      const oldId = subcommand;
+      requireFlags(input, ["with"]);
+      return client.post(`/api/memories/${encodeURIComponent(oldId)}/supersede`, { replacement_id: input.flags.with, reason: input.flags.reason || "" });
     }
-    case "demo": {
-      await runDemo(input, service);
-      return;
+    case "touchpoint":
+      if ((subcommand || "list") === "list") return client.get("/api/touchpoints", { project_key: input.flags.project, status: input.flags.status });
+      if (subcommand === "upsert") {
+        requireFlags(input, ["name", "projects"]);
+        return client.post("/api/touchpoints", {
+          id: input.flags.id,
+          name: input.flags.name,
+          projects: list(input.flags.projects),
+          kind: input.flags.kind || "other",
+          status: input.flags.status || "active",
+          summary: input.flags.summary || "",
+          memory_ids: list(input.flags.memories),
+          tags: list(input.flags.tags)
+        });
+      }
+      throw new Error("Use: minipmdb touchpoint upsert|list");
+    case "context":
+      requireFlags(input, ["project"]);
+      return client.get("/api/context", { project_key: input.flags.project, task: input.flags.task || "", profile: input.flags.profile || "balanced", max_chars: input.flags.max_chars });
+    case "audit": {
+      const report = await client.get("/api/audit", { project_key: input.flags.project, strict: Boolean(input.flags.strict) });
+      if (!report.passed) process.exitCode = 1;
+      return input.flags.json ? report : formatAuditReport(report);
     }
+    case "audit-snapshot": {
+      requireFlags(input, ["snapshot"]);
+      const snapshot = normalizeSnapshot(JSON.parse(await fs.readFile(input.flags.snapshot, "utf8")));
+      const report = auditSnapshot(snapshot, { strict: Boolean(input.flags.strict), projectKey: input.flags.project || "" });
+      if (!report.passed) process.exitCode = 1;
+      return input.flags.json ? report : formatAuditReport(report);
+    }
+    case "export": {
+      requireFlags(input, ["out"]);
+      const snapshot = await client.get("/api/export");
+      await fs.writeFile(input.flags.out, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+      return `Exported MiniPMDB snapshot to ${input.flags.out}.`;
+    }
+    case "runtime":
+      return client.get("/api/runtime");
+    case "demo":
+      if (!['reset', 'fix'].includes(subcommand)) throw new Error("Use: minipmdb demo reset|fix");
+      return client.post(`/api/demo/${subcommand}`);
     case "help":
-    case "--help":
-    case "-h":
-      process.stdout.write(`${helpText()}\n`);
-      return;
+    case undefined:
+      return help();
     default:
       throw new Error(`Unknown command: ${command}. Run minipmdb help.`);
   }
 }
 
-async function runDemo(input, service) {
-  const action = input.positionals[1] || "reset";
-  if (action === "reset") {
-    const fixture = await readFixture("initial.json");
-    await service.store.write(fixture);
-    process.stdout.write("Loaded the intentionally broken release-memory demo. Run: minipmdb audit --strict\n");
-    return;
-  }
-  if (action === "fix") {
-    await service.store.update(applyReleaseDemoFix);
-    process.stdout.write("Applied a reviewed resolution and supersession. Run: minipmdb audit --strict\n");
-    return;
-  }
-  throw new Error("demo action must be reset or fix.");
-}
-
-async function readFixture(name) {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const filePath = path.resolve(here, "..", "examples", "release-guard", name);
-  return JSON.parse(await fs.readFile(filePath, "utf8"));
-}
-
-function parseArgs(argv) {
+function parse(argv) {
   const positionals = [];
   const flags = {};
   for (let index = 0; index < argv.length; index += 1) {
@@ -145,68 +111,49 @@ function parseArgs(argv) {
       positionals.push(token);
       continue;
     }
-    const [rawName, inline] = token.slice(2).split(/=(.*)/s, 2);
-    if (inline !== undefined) {
-      flags[rawName] = inline;
-      continue;
-    }
+    const key = token.slice(2).replace(/-/g, "_");
     const next = argv[index + 1];
-    if (next !== undefined && !next.startsWith("--")) {
-      flags[rawName] = next;
+    if (!next || next.startsWith("--")) flags[key] = true;
+    else {
+      flags[key] = next;
       index += 1;
-    } else {
-      flags[rawName] = true;
     }
   }
   return { positionals, flags };
 }
 
-function printJsonOrText(input, value, text) {
-  process.stdout.write(input.flags.json ? `${JSON.stringify(value, null, 2)}\n` : `${text}\n`);
+function requireFlags(input, names) {
+  const missing = names.filter((name) => !input.flags[name]);
+  if (missing.length) throw new Error(`Missing flags: ${missing.map((item) => `--${item}`).join(", ")}.`);
 }
 
-function commaList(value) {
-  return value ? String(value).split(",").map((item) => item.trim()).filter(Boolean) : [];
+function list(value) {
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
 }
 
-function requiredPosition(input, index, message) {
-  const value = input.positionals[index];
-  if (!value) throw new Error(message);
-  return value;
+function print(value, json) {
+  if (typeof value === "string" && !json) process.stdout.write(`${value}\n`);
+  else process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
-function requireFlags(flags, names) {
-  const missing = names.filter((name) => !flags[name]);
-  if (missing.length) throw new Error(`Missing required flags: ${missing.map((name) => `--${name}`).join(", ")}.`);
-}
+function help() {
+  return `MiniPMDB — CI for governed cross-project agent memory
 
-function formatMemoryList(memories, status) {
-  const heading = status ? `MiniPMDB memories with status ${status}` : "MiniPMDB memories";
-  if (!memories.length) return `${heading}: none.`;
-  return [
-    `${heading}: ${memories.length}`,
-    ...memories.map((memory) =>
-      `- ${memory.id} | ${memory.status} | ${memory.kind}/${memory.confidence} | ${memory.title}`
-    )
-  ].join("\n");
-}
+Start the loopback service first with: npm start
 
-function helpText() {
-  return `MiniPMDB — governed project memory for coding agents
-
-Usage:
-  minipmdb init --project <key> --name <name>
-  minipmdb list [--status draft|unreviewed|reviewed|rejected|...]
-  minipmdb audit [--strict] [--json]
-  minipmdb context --task <task> [--profile drift_guard|balanced|compact]
-  minipmdb remember --title <title> --body <body> [--kind decision]
-  minipmdb source attach <memory-id> --label <label> --ref <reference>
-  minipmdb review <memory-id> [--status reviewed] [--reviewer <name>]
-  minipmdb supersede <old-id> --with <replacement-id> [--reason <text>]
-  minipmdb demo reset
-  minipmdb demo fix
-
-Global flags:
-  --store <path>   JSON store path (default: ${DEFAULT_STORE_PATH})
-  --json           Machine-readable output`;
+Commands:
+  project add --key KEY --name NAME --repo PATH
+  list [--project KEY] [--status STATUS]
+  remember --project KEY --title TITLE --body BODY [--kind KIND]
+  source attach MEMORY_ID --label LABEL --ref REF
+  review MEMORY_ID [--status reviewed|rejected]
+  supersede OLD_ID --with REPLACEMENT_ID
+  touchpoint upsert --name NAME --projects A,B --memories ID_A,ID_B
+  touchpoint list [--project KEY]
+  context --project KEY [--task TEXT] [--profile compact]
+  audit [--project KEY] [--strict] [--json]
+  audit-snapshot --snapshot FILE [--strict]
+  export --out FILE
+  runtime
+  demo reset|fix`;
 }

@@ -1,22 +1,26 @@
 #!/usr/bin/env node
 import readline from "node:readline";
-import { MiniPMDBService } from "./service.js";
-import { DEFAULT_STORE_PATH } from "./store.js";
+import { MiniPMDBClient } from "./api-client.js";
 
 const mode = String(process.env.MINIPMDB_MCP_MODE || "project-draft").toLowerCase();
-if (!["read-only", "project-draft", "draft-write"].includes(mode)) {
-  throw new Error("MINIPMDB_MCP_MODE must be read-only, project-draft, or draft-write.");
-}
-
-const service = new MiniPMDBService({ storePath: process.env.MINIPMDB_STORE || DEFAULT_STORE_PATH });
-const tools = buildTools(mode);
+if (!["read-only", "project-draft", "draft-write"].includes(mode)) throw new Error("MINIPMDB_MCP_MODE must be read-only, project-draft, or draft-write.");
+const client = new MiniPMDBClient();
 const canDraft = mode !== "read-only";
+const projectPromise = client.get("/api/projects/resolve", { repo_path: process.cwd() });
+const tools = buildTools(canDraft);
 const instructions = canDraft
-  ? "Project-draft scopes writes to this configured project store. memory_remember persists unreviewed candidates, and source_attach adds evidence to those candidates without approving them. Record only durable, non-secret facts and return created IDs for human review. Never claim that a candidate is approved. A human must approve or reject it with the MiniPMDB CLI."
-  : "Read governed context before project work. Treat warnings and history separately from active project truth. This server is strictly read-only; do not claim that you recorded, sourced, approved, rejected, or changed a memory.";
+  ? "Project-draft is scoped to the registered project matching this MCP working directory. memory_remember creates only unreviewed candidates and source_attach adds evidence without approval. A human must approve or reject candidates in the MiniPMDB dashboard or CLI."
+  : "This MiniPMDB connection is strictly read-only. Treat warnings and cross-project touchpoint context separately from reviewed project truth.";
 const input = readline.createInterface({ input: process.stdin, terminal: false });
+let messageQueue = Promise.resolve();
 
-input.on("line", async (line) => {
+input.on("line", (line) => {
+  messageQueue = messageQueue.then(() => processLine(line)).catch((error) => {
+    write({ jsonrpc: "2.0", id: null, error: { code: -32603, message: error.message } });
+  });
+});
+
+async function processLine(line) {
   if (!line.trim()) return;
   let message;
   try {
@@ -29,131 +33,63 @@ input.on("line", async (line) => {
     const result = await handle(message);
     if (message.id !== undefined) write({ jsonrpc: "2.0", id: message.id, result });
   } catch (error) {
-    if (message.id !== undefined) {
-      write({ jsonrpc: "2.0", id: message.id, error: { code: -32000, message: error.message } });
-    }
-  }
-});
-
-async function handle(message) {
-  switch (message.method) {
-    case "initialize":
-      return {
-        protocolVersion: message.params?.protocolVersion || "2025-03-26",
-        capabilities: { tools: {} },
-        serverInfo: { name: "minipmdb", version: "0.1.0" },
-        instructions
-      };
-    case "ping":
-      return {};
-    case "tools/list":
-      return { tools };
-    case "tools/call":
-      return callTool(message.params?.name, message.params?.arguments || {});
-    case "resources/list":
-      return { resources: [] };
-    case "prompts/list":
-      return { prompts: [] };
-    default:
-      throw new Error(`Unsupported method: ${message.method}`);
+    if (message.id !== undefined) write({ jsonrpc: "2.0", id: message.id, error: { code: -32000, message: error.message } });
   }
 }
 
+async function handle(message) {
+  if (message.method === "initialize") return { protocolVersion: message.params?.protocolVersion || "2025-03-26", capabilities: { tools: {} }, serverInfo: { name: "minipmdb", version: "0.1.0" }, instructions };
+  if (message.method === "ping") return {};
+  if (message.method === "tools/list") return { tools };
+  if (message.method === "tools/call") return callTool(message.params?.name, message.params?.arguments || {});
+  if (message.method === "resources/list" || message.method === "prompts/list") return { [message.method.startsWith("resources") ? "resources" : "prompts"]: [] };
+  throw new Error(`Unsupported method: ${message.method}`);
+}
+
 async function callTool(name, args) {
+  const project = await projectPromise;
   if (name === "memory_context") {
-    const context = await service.context({
-      task: args.task || "",
-      profile: args.profile || "balanced",
-      maxChars: args.max_chars
-    });
+    const context = await client.get("/api/context", { project_key: project.key, task: args.task || "", profile: args.profile || "balanced", max_chars: args.max_chars });
     return result(context.context_pack, context);
   }
   if (name === "memory_audit") {
-    const report = await service.audit({ strict: Boolean(args.strict) });
+    const report = await client.get("/api/audit", { project_key: project.key, strict: Boolean(args.strict) });
     return result(JSON.stringify(report, null, 2), report);
   }
   if (name === "memory_list") {
-    const store = await service.read();
-    const memories = args.status
-      ? store.memories.filter((memory) => memory.status === args.status)
-      : store.memories;
-    return result(JSON.stringify(memories, null, 2), { memories });
+    const listed = await client.get("/api/memories", { project_key: project.key, status: args.status });
+    return result(JSON.stringify(listed.memories, null, 2), listed);
   }
   if (name === "memory_remember" && canDraft) {
-    const store = await service.remember(args, { reviewFirst: true });
-    const memory = store.memories.at(-1);
-    return result(`Recorded ${memory.id} as ${memory.status}; human review is still required.`, { memory });
+    const created = await client.post("/api/memories", { ...args, project_key: project.key, project_scope: project.key, review_first: true });
+    return result(`Recorded ${created.memory.id} as unreviewed; human review is required.`, created);
   }
   if (name === "source_attach" && canDraft) {
-    const store = await service.attachSource(args.memory_id, {
-      type: args.type || "doc",
-      label: args.label,
-      ref: args.ref
-    }, { candidateOnly: true });
-    const memory = store.memories.find((item) => item.id === args.memory_id);
-    const source = store.sources.at(-1);
-    return result(`Attached ${source.id} to ${memory.id}; human review is still required.`, { memory, source });
+    const attached = await client.post(`/api/memories/${encodeURIComponent(args.memory_id)}/sources`, { ...args, project_scope: project.key, candidate_only: true });
+    return result(`Attached ${attached.source.id} to ${attached.memory.id}; human review is still required.`, attached);
   }
   throw new Error(`Unknown or disabled tool: ${name}`);
 }
 
-function buildTools(mcpMode) {
+function buildTools(includeDraft) {
   const definitions = [
-    {
-      name: "memory_context",
-      description: "Return a budgeted context pack that separates reviewed project truth from warnings and history.",
-      inputSchema: objectSchema({
-        task: { type: "string" },
-        profile: { type: "string", enum: ["drift_guard", "balanced", "compact"] },
-        max_chars: { type: "number", minimum: 500 }
-      }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
-    },
-    {
-      name: "memory_audit",
-      description: "Audit memory provenance, review state, conflicts, supersession, and context-profile safety.",
-      inputSchema: objectSchema({ strict: { type: "boolean" } }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
-    },
-    {
-      name: "memory_list",
-      description: "List local project memories, optionally filtered by lifecycle status.",
-      inputSchema: objectSchema({ status: { type: "string" } }),
-      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
-    }
+    tool("memory_context", "Return governed project truth, warnings, and relevant cross-project touchpoint context.", { task: { type: "string" }, profile: { type: "string", enum: ["drift_guard", "balanced", "compact"] }, max_chars: { type: "number", minimum: 500 } }, [], true),
+    tool("memory_audit", "Audit provenance, review state, conflicts, supersession, touchpoints, and context safety.", { strict: { type: "boolean" } }, [], true),
+    tool("memory_list", "List lifecycle state for memories owned by this registered project.", { status: { type: "string" } }, [], true)
   ];
-  if (mcpMode !== "read-only") {
-    definitions.push({
-      name: "memory_remember",
-      description: "Record an unreviewed project-memory candidate. This tool cannot self-approve agent claims.",
-      inputSchema: objectSchema({
-        title: { type: "string" },
-        body: { type: "string" },
-        kind: { type: "string" },
-        confidence: { type: "string" },
-        tags: { type: "array", items: { type: "string" } },
-        source_ids: { type: "array", items: { type: "string" } },
-        critical: { type: "boolean" }
-      }, ["title", "body"]),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
-    });
-    definitions.push({
-      name: "source_attach",
-      description: "Attach project evidence to a draft or unreviewed candidate without changing its review status.",
-      inputSchema: objectSchema({
-        memory_id: { type: "string" },
-        type: { type: "string", enum: ["file", "commit", "pr", "issue", "chat", "doc", "command", "url"] },
-        label: { type: "string" },
-        ref: { type: "string" }
-      }, ["memory_id", "label", "ref"]),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
-    });
+  if (includeDraft) {
+    definitions.push(tool("memory_remember", "Create an unreviewed candidate in this project; this cannot create reviewed truth.", {
+      title: { type: "string" }, body: { type: "string" }, kind: { type: "string" }, confidence: { type: "string" }, tags: { type: "array", items: { type: "string" } }, critical: { type: "boolean" }
+    }, ["title", "body"], false));
+    definitions.push(tool("source_attach", "Attach evidence to this project's draft or unreviewed candidate without approving it.", {
+      memory_id: { type: "string" }, type: { type: "string" }, label: { type: "string" }, ref: { type: "string" }
+    }, ["memory_id", "label", "ref"], false));
   }
   return definitions;
 }
 
-function objectSchema(properties, required = []) {
-  return { type: "object", properties, required, additionalProperties: false };
+function tool(name, description, properties, required, readOnlyHint) {
+  return { name, description, inputSchema: { type: "object", properties, required, additionalProperties: false }, annotations: { readOnlyHint, destructiveHint: false, openWorldHint: false } };
 }
 
 function result(text, structuredContent) {
