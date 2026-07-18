@@ -14,6 +14,8 @@ The output directory is intentionally ignored by Git. The source captures, exact
 
 Do not show a `/feedback` Session ID in the video. Add it privately to Devpost and replace the pending value in `HACKATHON.md` before submission.
 
+For the final narration, upload, public-link check, and Devpost handoff, follow the [submission runbook](../docs/submission-runbook.md). The silent master and timestamped voiceover remain the stable morning review inputs; judge-demo changes do not require a new visual render unless the walkthrough reveals a visible defect.
+
 ## Re-render the silent master
 
 The committed JPEGs are the source frames. With FFmpeg available on `PATH`:

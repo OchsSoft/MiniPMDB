@@ -18,6 +18,8 @@
     "test": "node --test",
     "check": "node scripts/check.js",
     "sanitize": "node scripts/sanitize-check.js",
+    "judge:demo": "node scripts/judge-demo.js",
+    "judge:dry-run": "node scripts/judge-dry-run.js",
     "video:serve": "node video/serve.mjs",
     "video:render": "node video/render.mjs",
     "smoke": "node src/cli.js audit --strict --store examples/release-guard/resolved.json && node src/cli.js context --store examples/release-guard/resolved.json --profile compact --task release",

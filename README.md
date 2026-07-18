@@ -6,9 +6,25 @@ Most memory tools optimize recall. MiniPMDB asks a different question: **should 
 
 It ships as a dependency-free Node.js CLI, a stdio MCP server for Codex and other compatible agents, a local audit dashboard, and a composable GitHub Action.
 
-## See the failure in 60 seconds
+## Judge demo: one command
 
 Requirements: Node.js 20 or newer. No database, account, API key, container, or package download is required.
+
+```console
+npm run judge:demo
+```
+
+The command loads a synthetic unsafe-memory example, starts the loopback dashboard, and opens it in your browser. Select **Apply governed fix** to see the strict audit move from blocked to passing without deleting the historical warning. On Windows, `judge-demo.cmd` provides the same path by double-click; macOS and Linux users can run `./judge-demo.sh`.
+
+For a non-interactive proof of the complete CLI, context, dashboard API, and read-only MCP path:
+
+```console
+npm run judge:dry-run
+```
+
+See the [judge guide](docs/judge-guide.md) for supported platforms, expected results, and a three-minute evaluation route.
+
+## See the failure manually in 60 seconds
 
 ```console
 npm run demo:reset
@@ -117,6 +133,7 @@ npm ci --ignore-scripts
 npm run check
 npm test
 npm run smoke
+npm run judge:dry-run
 ```
 
 The project uses Node built-ins only. `npm ci` verifies the lockfile but downloads no runtime packages.
