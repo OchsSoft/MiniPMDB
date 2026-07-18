@@ -34,3 +34,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose -f compose.yaml config --quiet
+
+  podman-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Start pinned MongoDB with Podman
+        run: >-
+          podman run --detach --name minipmdb-ci-mongo
+          --publish 127.0.0.1:27017:27017
+          --volume minipmdb-ci-mongodb:/data/db
+          docker.io/library/mongo:8.2.6-noble
+      - name: Wait for MongoDB
+        run: |
+          for attempt in {1..30}; do
+            if podman exec minipmdb-ci-mongo mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          podman logs minipmdb-ci-mongo
+          exit 1
+      - name: Seed through MiniPMDB external mode
+        run: node scripts/external-persistence-smoke.js seed
+        env:
+          MINIPMDB_MONGODB_URI: mongodb://127.0.0.1:27017
+          MINIPMDB_DB_NAME: minipmdb_podman_smoke
+      - name: Restart the Podman container
+        run: podman restart minipmdb-ci-mongo
+      - name: Wait for restarted MongoDB
+        run: |
+          for attempt in {1..30}; do
+            if podman exec minipmdb-ci-mongo mongosh --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          podman logs minipmdb-ci-mongo
+          exit 1
+      - name: Verify MiniPMDB data survived the restart
+        run: node scripts/external-persistence-smoke.js verify
+        env:
+          MINIPMDB_MONGODB_URI: mongodb://127.0.0.1:27017
+          MINIPMDB_DB_NAME: minipmdb_podman_smoke
+      - name: Clean up Podman resources
+        if: always()
+        run: |
+          podman rm --force minipmdb-ci-mongo || true
+          podman volume rm --force minipmdb-ci-mongodb || true
