@@ -17,7 +17,8 @@ test("MCP defaults to project-draft and strict read-only removes writes", async 
   const seed = await fixture("resolved.json");
   const project = seed.projects.find((item) => item.key === "paper-crane-cli");
   project.repo_path = repo;
-  project.repo_root = process.platform === "win32" ? repo.toLowerCase() : repo;
+  const realRepo = await fs.realpath(repo);
+  project.repo_root = process.platform === "win32" ? realRepo.toLowerCase() : realRepo;
   const running = await startMiniPMDBServer({ home: path.join(home, "runtime"), port: 0, seed });
   t.after(async () => { await running.close(); await fs.rm(home, { recursive: true, force: true }); });
 
@@ -26,11 +27,14 @@ test("MCP defaults to project-draft and strict read-only removes writes", async 
     { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} },
     { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "memory_remember", arguments: { title: "Candidate", body: "Needs review." } } }
   ]);
-  assert.match(drafted[0].result.instructions, /Project-draft/);
-  assert(drafted[1].result.tools.some((item) => item.name === "memory_remember"));
-  assert.equal(drafted[2].result.structuredContent.memory.status, "unreviewed");
+  const initialized = drafted.find((item) => item.id === 1);
+  const listed = drafted.find((item) => item.id === 2);
+  const created = drafted.find((item) => item.id === 3);
+  assert.match(initialized?.result?.instructions || "", /Project-draft/, JSON.stringify(drafted));
+  assert(listed?.result?.tools.some((item) => item.name === "memory_remember"), JSON.stringify(drafted));
+  assert.equal(created?.result?.structuredContent?.memory?.status, "unreviewed", JSON.stringify(drafted));
   const readOnly = await runMcp(running.url, repo, "read-only", [{ jsonrpc: "2.0", id: 4, method: "tools/list", params: {} }]);
-  assert.deepEqual(readOnly[0].result.tools.map((item) => item.name), ["memory_context", "memory_audit", "memory_list"]);
+  assert.deepEqual(readOnly.find((item) => item.id === 4)?.result?.tools.map((item) => item.name), ["memory_context", "memory_audit", "memory_list"]);
 });
 
 function runMcp(apiUrl, cwd, mode, messages) {
