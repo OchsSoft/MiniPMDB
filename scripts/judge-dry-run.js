@@ -95,14 +95,14 @@ try {
       }
     ]
   });
-  assert.match(draftResponses.find((message) => message.id === 10).result.instructions, /unreviewed drafts/i);
+  assert.match(draftResponses.find((message) => message.id === 10).result.instructions, /draft records only/i);
   const approvedMemory = draftResponses.find((message) => message.id === 11).result.structuredContent.memory;
   const rejectedMemory = draftResponses.find((message) => message.id === 12).result.structuredContent.memory;
-  assert.equal(approvedMemory.status, "unreviewed");
-  assert.equal(rejectedMemory.status, "unreviewed");
+  assert.equal(approvedMemory.status, "draft");
+  assert.equal(rejectedMemory.status, "draft");
   const approvedId = approvedMemory.id;
   const rejectedId = rejectedMemory.id;
-  const pending = expectCliJson(["list", "--status", "unreviewed", "--json", "--store", storePath]);
+  const pending = expectCliJson(["list", "--status", "draft", "--json", "--store", storePath]);
   assert(pending.memories.some((memory) => memory.id === approvedId));
   assert(pending.memories.some((memory) => memory.id === rejectedId));
   expectCliSuccess([

@@ -60,7 +60,7 @@ async function run(input) {
       requireFlags(input.flags, ["title", "body"]);
       const store = await service.remember({
         kind: input.flags.kind || "note",
-        status: input.flags.status || "unreviewed",
+        status: input.flags.status || "draft",
         confidence: input.flags.confidence || "unknown",
         title: input.flags.title,
         body: input.flags.body,

@@ -81,7 +81,7 @@ Available read tools:
 - `memory_audit` runs the same governance checks as CI.
 - `memory_list` exposes the local lifecycle state for inspection.
 
-Set `MINIPMDB_MCP_MODE=draft-write` to expose `memory_remember`. MCP writes are forcibly draft/unreviewed; an agent cannot approve its own claim. Review stays an explicit CLI or maintainer action.
+Set `MINIPMDB_MCP_MODE=draft-write` to expose `memory_remember`. New memories default to `draft`, and MCP writes are forcibly kept in that state; an agent cannot approve its own claim. Review stays an explicit CLI or maintainer action.
 
 To exercise that full workflow on a repository of your own, follow [Try MiniPMDB on your own project](docs/try-your-project.md) and paste the [copy-ready draft-memory intake prompt](docs/prompts/draft-memory-intake.md) into a new Codex task. The guide covers local store initialization, MCP configuration, draft creation, evidence attachment, human approval or rejection, and final audit/context verification.
 
@@ -104,7 +104,7 @@ The action has no install step and receives only read access from the workflow. 
 
 ```text
 minipmdb init --project <key> --name <name>
-minipmdb list [--status unreviewed|reviewed|rejected|...]
+minipmdb list [--status draft|reviewed|rejected|...]
 minipmdb remember --title <title> --body <body> [--kind decision]
 minipmdb source attach <memory-id> --label <label> --ref <reference>
 minipmdb review <memory-id> [--status reviewed]

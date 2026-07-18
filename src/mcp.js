@@ -11,7 +11,7 @@ if (!["read-only", "draft-write"].includes(mode)) {
 const service = new MiniPMDBService({ storePath: process.env.MINIPMDB_STORE || DEFAULT_STORE_PATH });
 const tools = buildTools(mode);
 const instructions = mode === "draft-write"
-  ? "Read governed context before project work. memory_remember creates unreviewed drafts only: record durable, non-secret project facts, never invent source IDs, and return created IDs plus proposed evidence for human review. Never claim that a draft is approved. A human must attach evidence and approve or reject it with the MiniPMDB CLI."
+  ? "Read governed context before project work. memory_remember creates draft records only: record durable, non-secret project facts, never invent source IDs, and return created IDs plus proposed evidence for human review. Never claim that a draft is approved. A human must attach evidence and approve or reject it with the MiniPMDB CLI."
   : "Read governed context before project work. Treat warnings and history separately from active project truth. This server is read-only; do not claim that you recorded, approved, rejected, or changed a memory.";
 const input = readline.createInterface({ input: process.stdin, terminal: false });
 
@@ -114,7 +114,7 @@ function buildTools(mcpMode) {
   if (mcpMode === "draft-write") {
     definitions.push({
       name: "memory_remember",
-      description: "Record a draft or unreviewed project memory. This tool cannot self-approve agent claims.",
+      description: "Record a draft project memory. This tool cannot self-approve agent claims.",
       inputSchema: objectSchema({
         title: { type: "string" },
         body: { type: "string" },
