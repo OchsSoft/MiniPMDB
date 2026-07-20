@@ -10,6 +10,8 @@ MiniPMDB is a working local developer tool. The fastest visual evaluation takes 
 
 No account, API key, model call, preinstalled database, or container is required. The API, dashboard, and managed database bind only to `127.0.0.1`.
 
+Managed mode is tested in the public validation matrix on Windows, macOS, and Ubuntu. The prepared launchers are `judge-demo.cmd` for Windows and `judge-demo.sh` for macOS and Linux.
+
 ## Three-minute route
 
 ```console

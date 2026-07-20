@@ -6,7 +6,7 @@ Most memory tools optimize recall. MiniPMDB asks whether a memory is allowed to 
 
 ## Judge demo
 
-Requirements: Node.js 20.19 or newer and network access for the first managed MongoDB download.
+Requirements: Node.js 20.19 or newer and network access for the first managed MongoDB download. The managed runtime is tested in the public CI matrix on Windows, macOS, and Ubuntu.
 
 ```console
 npm ci --ignore-scripts
@@ -136,5 +136,9 @@ npm audit signatures
 ```
 
 MiniPMDB has no remote hosting, telemetry, vector search, transcript capture, or task execution. Only synthetic data is public. See [Architecture](docs/architecture.md), [Security](SECURITY.md), [third-party notices](THIRD_PARTY_NOTICES.md), and the [Build Week disclosure](HACKATHON.md).
+
+## Build Week collaboration
+
+The entrant defined MiniPMDB's overall product architecture and functional decisions: MongoDB as the canonical store, the project-draft trust boundary, human-owned review and touchpoint controls, cross-project context behavior, local-first operation, and the deliberately small public scope. Codex with GPT-5.6 accelerated implementation of those decisions, sanitization, test coverage, cross-platform hardening, documentation, open-source packaging, and production of the live demo. Final product and release decisions remained with the entrant.
 
 MiniPMDB is MPL-2.0 licensed and intentionally small enough to be a first open-source tool without publishing the larger private system that inspired the problem.
