@@ -12,7 +12,7 @@
 
 ## Release
 
-- [ ] Replace the pending `/feedback` Session ID in `HACKATHON.md`.
+- [ ] Enter the primary `/feedback` Session ID directly in the required Devpost field; do not add a placeholder to the repository or video.
 - [ ] Confirm the public commit range contains only work eligible for judging.
 - [ ] Tag `v0.1.0` only after CI passes from the public repository.
 - [ ] Test the README judge path in a fresh public clone with an empty MiniPMDB runtime and binary cache.

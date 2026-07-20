@@ -15,10 +15,9 @@ This runbook keeps the final MiniPMDB Developer Tools submission reproducible. C
 
 ## Video pass
 
-- [ ] Open the 2:50 silent 1080p master described in [`video/README.md`](../video/README.md).
-- [ ] Record one narration track from [`video/voiceover.md`](../video/voiceover.md), beginning at `00:00`.
-- [ ] Import [`video/voiceover.srt`](../video/voiceover.srt) as captions and retime only if the final narration needs it.
-- [ ] Confirm the export is under three minutes, 1080p, H.264/AAC, and has clearly audible narration.
+- [ ] Open the 2:50 narrated 1080p master described in [`video/README.md`](../video/README.md).
+- [ ] Confirm the narration matches [`video/voiceover.md`](../video/voiceover.md) and the captions match [`video/voiceover.srt`](../video/voiceover.srt).
+- [ ] Confirm the export is under three minutes, 1080p, H.264/AAC, and has clearly audible narration with natural pauses.
 - [ ] Watch the complete export once for private tabs, usernames, notifications, credentials, and unintended audio.
 - [ ] Upload to YouTube with public visibility and verify the link in a signed-out browser.
 
@@ -26,7 +25,7 @@ This runbook keeps the final MiniPMDB Developer Tools submission reproducible. C
 
 - **Project:** MiniPMDB
 - **Category:** Developer Tools
-- **Tagline:** CI for agent memory.
+- **Tagline:** CI for cross-project agent memory.
 - **One-sentence pitch:** MiniPMDB prevents unreviewed, unsourced, contradictory, or obsolete project memories from silently becoming coding-agent truth.
 - **Repository:** `https://github.com/OchsSoft/MiniPMDB`
 - **Primary proof:** the fail-fix-pass dashboard flow backed by the identical CLI, MCP, and GitHub Action audit.
@@ -34,7 +33,7 @@ This runbook keeps the final MiniPMDB Developer Tools submission reproducible. C
 
 Copy the final public descriptions and testing steps from [`docs/submission-copy.md`](submission-copy.md).
 
-Use the README and [`HACKATHON.md`](../HACKATHON.md) as the source of truth for product boundaries and preexisting-work disclosure. Before submission, replace the pending `/feedback` Session ID in `HACKATHON.md`, add the public video URL, and record the final public commit or release tag.
+Use the README and [`HACKATHON.md`](../HACKATHON.md) as the source of truth for product boundaries, entrant-led architecture, Codex/GPT-5.6 implementation assistance, and preexisting-work disclosure. Before submission, enter the primary `/feedback` Session ID directly in the required Devpost field, add the public video URL, and record the final public commit or release tag.
 
 ## Final submission check
 

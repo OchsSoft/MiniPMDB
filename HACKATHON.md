@@ -22,13 +22,11 @@ No private project data, credentials, transcripts, customer material, machine pa
 
 ## Codex and GPT-5.6 build evidence
 
-Codex with GPT-5.6 is the primary implementation environment for product positioning, sanitization, architecture, implementation, validation, documentation, and demo preparation.
+The entrant defined the overall product architecture and choices for functionality, including the canonical MongoDB model, project-draft permissions, human review boundary, cross-project touchpoints, local-first runtime, and bounded public scope.
 
-```text
-Primary Codex /feedback Session ID: TBD before submission
-```
+Codex with GPT-5.6 accelerated the sanitized public implementation of those choices, tests and validation, cross-platform hardening, documentation, open-source packaging, and live-demo production. Final product and release decisions remained with the entrant.
 
-The user supplies that session ID, narration, public YouTube upload, and final Devpost form. The public commits and release tag provide source evidence.
+The primary Codex `/feedback` Session ID is entered directly in the required Devpost field rather than committed to the public repository. Public commits and CI runs provide implementation and validation evidence. The final narrated live demo uses the repository's timestamped script; the entrant supplies the public YouTube upload and final Devpost form.
 
 ## Judge path
 

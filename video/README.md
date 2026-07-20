@@ -1,10 +1,10 @@
-# Ready-to-narrate live demo video
+# Narrated live demo video
 
-The final master is a 2:50 recording of the real loopback application using its managed MongoDB and synthetic release-auth fixture. It is 1920x1080 at 30 fps with an AAC silent narration track. No storyboard or static HTML scene appears in the final video.
+The final narrated master is `minipmdb-demo-narrated-2m50s.mp4`, delivered outside Git because generated media is intentionally ignored. It is a 2:50 recording of the real loopback application using its managed MongoDB and synthetic release-auth fixture, with locally generated Kokoro `am_echo` narration. It is 1920x1080 at 30 fps with 48 kHz AAC audio. No storyboard or static HTML scene appears in the final video.
 
-Generated video files are intentionally ignored by Git. The delivered master is `minipmdb-demo-live-2m50s.mp4`; `video/output/minipmdb-demo-silent.mp4` is a compatibility copy of that same live master.
+The silent `minipmdb-demo-live-2m50s.mp4` and `video/output/minipmdb-demo-silent.mp4` remain replaceable-narration fallbacks. [voiceover.md](voiceover.md) and [voiceover.srt](voiceover.srt) match the narrated master, including the entrant-led architecture and Codex/GPT-5.6 implementation disclosure.
 
-## Add your voice
+## Optional replacement voice
 
 1. Import the live silent MP4 into Clipchamp, DaVinci Resolve, Premiere, CapCut, or another editor.
 2. Record one narration track from [voiceover.md](voiceover.md), starting at `00:00`.
@@ -12,7 +12,7 @@ Generated video files are intentionally ignored by Git. The delivered master is 
 4. Export 1080p H.264/AAC under three minutes and watch the complete result once.
 5. Upload publicly to YouTube using the copy in [submission-copy.md](../docs/submission-copy.md), then verify it while signed out.
 
-Do not put the `/feedback` Session ID in the video. Add it to the Devpost form and `HACKATHON.md` immediately before submission.
+Do not put the `/feedback` Session ID in the video or repository. Enter it directly in the required Devpost form field.
 
 ## Live recording timeline
 

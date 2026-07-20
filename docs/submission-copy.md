@@ -10,7 +10,7 @@ MiniPMDB is a local-first developer tool that stops unreviewed, unsourced, contr
 
 This working demo shows two synthetic projects colliding over a shared release-auth contract, MongoDB-backed touchpoints making the conflict visible, a strict audit failure, project-scoped Codex memory drafting, human review, explicit supersession, and a passing audit that preserves history.
 
-Built with Codex and GPT-5.6 for OpenAI Build Week. Open source under MPL-2.0.
+The entrant designed MiniPMDB's architecture and product behavior. Codex with GPT-5.6 accelerated the sanitized implementation, testing, documentation, cross-platform hardening, and live-demo production for OpenAI Build Week. Open source under MPL-2.0.
 
 Repository: https://github.com/OchsSoft/MiniPMDB
 
@@ -30,11 +30,11 @@ MiniPMDB runs with a managed, persistent local MongoDB by default and also suppo
 
 The demo uses two entirely synthetic projects. Their release-auth memories conflict, the strict audit fails, a human-reviewed resolution supersedes the unsafe claim, the touchpoint is repaired, and the identical audit passes without deleting history.
 
-This public repository is a small new implementation created during Build Week. A larger private concept predated the event; none of its code, data, integrations, or history is included. Codex with GPT-5.6 was the primary build environment for the extraction, architecture, implementation, tests, docs, and demo.
+This public repository is a small new implementation created during Build Week. A larger private concept predated the event; none of its code, data, integrations, or history is included. The entrant defined the overall architecture and functional choices: canonical MongoDB storage, project-draft permissions, the human review boundary, shared touchpoints, local-first operation, and the bounded public scope. Codex with GPT-5.6 accelerated implementation of those choices, sanitization, tests, cross-platform hardening, documentation, open-source packaging, and live-demo production. Final product and release decisions remained with the entrant.
 
 ## Devpost testing instructions
 
-Requirements: Node.js 20.19+ and first-run network access.
+Requirements: Node.js 20.19+ and first-run network access. Managed mode is tested on Windows, macOS, and Ubuntu.
 
 1. Clone the repository.
 2. Run `npm ci --ignore-scripts`.

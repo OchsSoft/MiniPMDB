@@ -1,6 +1,6 @@
 # Build Week live video walkthrough
 
-The final visual timeline, narration windows, and captions live in [`video/`](../video/README.md). The silent master is exactly 2:50 at 1920x1080 and 30 fps.
+The final visual timeline, narration windows, and captions live in [`video/`](../video/README.md). The narrated master and its replaceable-narration silent source are exactly 2:50 at 1920x1080 and 30 fps.
 
 Every visual is captured from the real MiniPMDB dashboard running on the loopback API with managed MongoDB and synthetic data. The video contains no static HTML storyboard scenes.
 
@@ -18,4 +18,4 @@ Every visual is captured from the real MiniPMDB dashboard running on the loopbac
 
 Use only synthetic data. Do not show local usernames, unrelated tabs, notifications, credentials, private repositories, or a `/feedback` Session ID.
 
-After narration, import [`video/voiceover.srt`](../video/voiceover.srt), export H.264/AAC under three minutes, and use the YouTube/Devpost copy in [`submission-copy.md`](submission-copy.md).
+The delivered narration and [`video/voiceover.srt`](../video/voiceover.srt) are synchronized. If replacing the voice, import the captions, export H.264/AAC under three minutes, and use the YouTube/Devpost copy in [`submission-copy.md`](submission-copy.md).

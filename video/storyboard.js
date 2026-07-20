@@ -94,10 +94,10 @@ env = {
     number: "10 / 11",
     label: "BUILT DURING OPENAI BUILD WEEK",
     body: `
-      <h2>Codex + GPT-5.6 built the public extraction.</h2>
+      <h2>Entrant-led architecture. Codex + GPT-5.6 accelerated implementation.</h2>
       <div class="split">
-        <section class="panel"><div class="panel-label">Primary build thread</div><h3>Thesis → Mongo pivot → validation</h3><ul><li>Cross-project touchpoints and trust boundaries</li><li>Managed and external runtime paths</li><li>Tests, public docs, CI, and this demo</li></ul></section>
-        <section class="panel"><div class="panel-label">Public boundary</div><h3>Small on purpose.</h3><ul><li>New Git history</li><li>Synthetic projects only</li><li>No private code or payloads</li><li>MPL-2.0 open source</li></ul></section>
+        <section class="panel"><div class="panel-label">Entrant-led product</div><h3>Architecture and functional scope</h3><ul><li>Canonical MongoDB and local-first runtime</li><li>Project-draft permissions and human review</li><li>Shared touchpoints across projects</li></ul></section>
+        <section class="panel"><div class="panel-label">Codex + GPT-5.6 assistance</div><h3>Implementation acceleration</h3><ul><li>Sanitized public implementation</li><li>Tests and cross-platform hardening</li><li>Documentation, packaging, and live demo</li></ul></section>
       </div>
     `
   },
