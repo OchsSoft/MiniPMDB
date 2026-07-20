@@ -19,7 +19,9 @@ npm ci --ignore-scripts
 npm run judge:demo
 ```
 
-Windows users may run `judge-demo.cmd`; macOS and Linux users may run `./judge-demo.sh`. If port 8797 is occupied, use `npm run judge:demo -- --port 8800`.
+Keep that terminal open. The command prints `Dashboard: http://127.0.0.1:8797` before first-run setup begins, then prints `Open: http://127.0.0.1:8797` and opens the browser when MongoDB is ready. If the browser does not open, paste the printed local address into a current browser.
+
+Windows users may run `judge-demo.cmd`; macOS and Linux users may run `./judge-demo.sh`. If port 8797 is occupied, use `npm run judge:demo -- --port 8800` and open the printed replacement address.
 
 1. Confirm the runtime panel reports Managed MongoDB 8.2.6 and a masked loopback endpoint.
 2. Select Paper Crane CLI and observe the blocked strict audit.

@@ -39,7 +39,7 @@ Requirements: Node.js 20.19+ and first-run network access. Managed mode is teste
 1. Clone the repository.
 2. Run `npm ci --ignore-scripts`.
 3. Run `npm run judge:demo`.
-4. In the dashboard, select Paper Crane CLI and inspect the blocked audit, broken Release authentication contract, review queue, and cross-project context.
+4. Keep the terminal open and use its printed dashboard address, normally `http://127.0.0.1:8797`. In the dashboard, select Paper Crane CLI and inspect the blocked audit, broken Release authentication contract, review queue, and cross-project context.
 5. Select **Apply governed fix** and confirm the audit passes while the superseded token claim remains in history.
 6. Stop with `Ctrl+C`.
 7. Optionally run `npm run judge:dry-run` for automated managed persistence, external Mongo, MCP permissions, cross-project isolation, and fail–resolve–pass verification.
