@@ -14,6 +14,14 @@ try {
   assertRuntime();
   const options = parseOptions(process.argv.slice(2));
   const home = process.env.MINIPMDB_HOME || path.join(miniHome(), "judge-demo");
+  const expectedUrl = options.port === 0 ? "an OS-assigned 127.0.0.1 port" : `http://127.0.0.1:${options.port}`;
+  process.stdout.write([
+    "",
+    "Starting the MiniPMDB judge demo.",
+    `Dashboard: ${expectedUrl}${options.open && options.port !== 0 ? " (opens automatically when ready)" : ""}`,
+    "Keep this terminal open. The first managed start downloads MongoDB before the dashboard becomes available.",
+    ""
+  ].join("\n"));
   const seed = await loadSnapshotFile(path.join(root, "examples", "release-guard", "initial.json"));
   running = await startMiniPMDBServer({ home, port: options.port, seed });
   process.stdout.write([

@@ -13,6 +13,8 @@ npm ci --ignore-scripts
 npm run judge:demo
 ```
 
+The dashboard address is `http://127.0.0.1:8797`. The command prints that address before first-run setup begins and opens it automatically when MongoDB is ready; if the browser does not open, paste the printed address into a current browser. Keep the terminal running during the demo.
+
 The foreground process downloads a pinned, real MongoDB Community Server binary on first use, keeps its database under the platform user-data directory, binds both MongoDB and the dashboard to `127.0.0.1`, seeds two synthetic projects, and opens `http://127.0.0.1:8797`.
 
 The demo begins blocked: Paper Crane CLI proposes a long-lived release token while Release Relay accepts only OIDC. Their touchpoint makes both projects' memories visible together. Apply the governed fix to see the audit pass without deleting the superseded claim.
