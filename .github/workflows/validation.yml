@@ -3,7 +3,7 @@ name: validation
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
@@ -33,7 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose -f compose.yaml config --quiet
+      - name: Install Podman Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes podman-compose
+      - run: podman-compose -f compose.yaml config >/dev/null
 
   podman-runtime:
     runs-on: ubuntu-latest
