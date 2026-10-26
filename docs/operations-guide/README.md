@@ -64,3 +64,5 @@ Edition 26 October 2026. Repository OchsSoft/MiniPMDB. Inspected source revision
 Source files: [README.md](https://github.com/OchsSoft/MiniPMDB/blob/e47f5c1d5b5b0cc82c7e944dcd2ec254244e48de/README.md), [package.json](https://github.com/OchsSoft/MiniPMDB/blob/e47f5c1d5b5b0cc82c7e944dcd2ec254244e48de/package.json).
 
 [Editable Word edition](Operations_Guide.docx) | [PDF edition](Operations_Guide.pdf)
+
+For architecture, code-level explanations, worked change recipes, and detailed recovery, use the [development handbook](../development-handbook/README.md).

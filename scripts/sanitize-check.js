@@ -22,8 +22,13 @@ export async function runSanitizeCheck() {
   for (const file of await listFiles(root)) {
     const relative = path.relative(root, file).replaceAll("\\", "/");
     const stat = await fs.stat(file);
-    if (stat.size > 250_000 && !relative.endsWith("package-lock.json")) {
-      failures.push(`${relative}: file exceeds 250 KB`);
+    const handbookAsset = [
+      "docs/development-handbook/Development_Handbook.docx",
+      "docs/development-handbook/Development_Handbook.pdf"
+    ].includes(relative) || /^docs\/development-handbook\/figures\/figure-\d{2}-\d+\.svg$/.test(relative);
+    const sizeLimit = handbookAsset ? 5 * 1024 * 1024 : 250_000;
+    if (stat.size > sizeLimit && !relative.endsWith("package-lock.json")) {
+      failures.push(`${relative}: file exceeds ${handbookAsset ? "5 MiB handbook asset" : "250 KB"} limit`);
       continue;
     }
     if (!isTextFile(relative)) continue;
