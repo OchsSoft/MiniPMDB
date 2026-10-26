@@ -144,3 +144,7 @@ MiniPMDB has no remote hosting, telemetry, vector search, transcript capture, or
 The entrant defined MiniPMDB's overall product architecture and functional decisions: MongoDB as the canonical store, the project-draft trust boundary, human-owned review and touchpoint controls, cross-project context behavior, local-first operation, and the deliberately small public scope. Codex with GPT-5.6 accelerated implementation of those decisions, sanitization, test coverage, cross-platform hardening, documentation, open-source packaging, and production of the live demo. Final product and release decisions remained with the entrant.
 
 MiniPMDB is MPL-2.0 licensed and intentionally small enough to be a first open-source tool without publishing the larger private system that inspired the problem.
+
+## Operations guide
+
+Read the [repository operations guide](docs/operations-guide/README.md) for startup, working checks, troubleshooting, safe shutdown, and the Word/PDF editions.
